@@ -1,68 +1,73 @@
-rm(list=ls())
-
-gc(reset = TRUE) # Garbage Collection
-
-#################### R Workspace Options ####################
-options(scipen = 12) # Scientific Notation
-options(digits = 6) # Specify Digits
-options(java.parameters = "-Xmx1000m") # Increase Java Heap Size
-
-######################################## Functions, Libraries, & Parallel Computing ########################################
-
-#################### Functions ####################
-
-########## Install and/or Load Packages ##########
-packages <- function(x){
+startup = function(){
   
-  x <- deparse(substitute(x))
-  installed_packages <- as.character(installed.packages()[,1])
+  rm(list=ls())
   
-  if (length(intersect(x, installed_packages)) == 0){
-    install.packages(pkgs = x, dependencies = TRUE, repos = "http://cran.r-project.org")
+  gc(reset = TRUE) # Garbage Collection
+  
+  #################### R Workspace Options ####################
+  options(scipen = 12) # Scientific Notation
+  options(digits = 6) # Specify Digits
+  options(java.parameters = "-Xmx1000m") # Increase Java Heap Size
+  
+  ######################################## Functions, Libraries, & Parallel Computing ########################################
+  
+  #################### Functions ####################
+  
+  ########## Install and/or Load Packages ##########
+  packages <- function(x){
+    
+    x <- deparse(substitute(x))
+    installed_packages <- as.character(installed.packages()[,1])
+    
+    if (length(intersect(x, installed_packages)) == 0){
+      install.packages(pkgs = x, dependencies = TRUE, repos = "http://cran.r-project.org")
+    }
+    
+    library(x, character.only = TRUE)
+    rm(installed_packages) # Remove From Workspace
   }
   
-  library(x, character.only = TRUE)
-  rm(installed_packages) # Remove From Workspace
+  ########## Specify Number of Digits (Forward) ##########
+  numb_digits_F <- function(x,y){
+    numb_digits_F <- do.call("paste0", list(paste0(rep(0, y - nchar(x)), collapse = ""), x))
+    numb_digits_F <- ifelse(nchar(x) < y, numb_digits_F, x)
+  }
+  
+  ########## Remove Double Space ##########
+  numb_spaces <- function(x) gsub("[[:space:]]{2,}", " ", x)
+  
+  #################### Libraries ####################
+  packages(data.table) # Data Management/Manipulation
+  packages(doParallel) # Parallel Computing
+  packages(foreach) # Parallel Computing
+  packages(openxlsx) # Microsoft Excel Files
+  packages(plyr) # Data Management/Manipulation
+  packages(readxl) # Microsoft Excel Files
+  packages(reshape2) # Data Management/Manipulation
+  packages(stringi) # Character/String Editor
+  packages(stringr) # Character/String Editor
+  packages(zoo) # Time Series
+  
+  packages(parallelsugar)
+  packages(tidyverse)
+  packages(scales)
+  packages(directlabels)
+  packages(data.table)
+  packages(tools)
+  packages(tidycensus)
+  packages(censusapi)
+  
+  rm(packages)
+  library(tidyverse)
+  # library(devtools)
+  # install_github('nathanvan/parallelsugar')
+  
+  start_time <-Sys.time()
+  
+  set.seed(100)
 }
-
-########## Specify Number of Digits (Forward) ##########
-numb_digits_F <- function(x,y){
-  numb_digits_F <- do.call("paste0", list(paste0(rep(0, y - nchar(x)), collapse = ""), x))
-  numb_digits_F <- ifelse(nchar(x) < y, numb_digits_F, x)
-}
-
-########## Remove Double Space ##########
-numb_spaces <- function(x) gsub("[[:space:]]{2,}", " ", x)
-
-#################### Libraries ####################
-packages(data.table) # Data Management/Manipulation
-packages(doParallel) # Parallel Computing
-packages(foreach) # Parallel Computing
-packages(openxlsx) # Microsoft Excel Files
-packages(plyr) # Data Management/Manipulation
-packages(readxl) # Microsoft Excel Files
-packages(reshape2) # Data Management/Manipulation
-packages(stringi) # Character/String Editor
-packages(stringr) # Character/String Editor
-packages(zoo) # Time Series
-
-packages(parallelsugar)
-packages(tidyverse)
-packages(scales)
-packages(directlabels)
-packages(data.table)
-packages(tools)
-packages(tidycensus)
-packages(censusapi)
-
-rm(packages)
-library(tidyverse)
-# library(devtools)
-# install_github('nathanvan/parallelsugar')
-
-start_time <-Sys.time()
-
-set.seed(100)
+startup()
+rm(list=ls())
 
 key <- census_api_key("0206e3f2924a424be8722887fd0a49cea6308a7e")
 key <- "0206e3f2924a424be8722887fd0a49cea6308a7e"
@@ -73,17 +78,30 @@ apis <- listCensusApis()
 vintage_year = "2016" #<----------------------------------------------------------- INPUT VINTAGE ESTIMATE YEAR HERE
 vintage_end = "9"     #<----------------------------------------------------------- INPUT VINTAGE DATE
 
-list <- listCensusMetadata(name = "pep/charagegroups", vintage = "2015", type ="variables")
+list <- listCensusMetadata(name = "sf1", vintage = "2010", type ="variables")
 list <- makeVarlist(name = "pep/charagegroups", vintage = "2015", find = "total", output = "list")
 
-# Gathering data for Census Years 2010-2016
-e2010 <- getCensus(name="pep/charagegroups", 
+fipslist <- read_csv("fipslist.csv")
+stateid = unlist(list(unique(fipslist$STATEID)))
+GEOID = unlist(list(fipslist$FIPS))
+# x = unlist(list("10", "13"))
+cen2010 = function(x){
+  tryCatch({#print(this.county)
+    a <- getCensus(name="pep/charagegroups", 
                    vintage = vintage_year, 
                    key = key, 
-                   vars =c("POP", "DATE", "SEX", "HISP", "RACE", "AGEGROUP", "GEONAME"), 
-                   region="COUNTY",
-                   regionin="state:10") %>% # State is set to Delaware
-  # Creating the GEOID variable
+                   vars =c("POP", "DATE", "DATE_DESC","SEX", "HISP", "RACE", "AGEGROUP", "GEONAME"), 
+                   region="COUNTY:*",
+                   regionin=paste0("state:", x)) 
+    return(a)
+  }
+  , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+dat <- mclapply(stateid, cen2010, mc.cores = (detectCores() - 1))
+pop2010_2020 <- rbindlist(dat)
+
+pop2010 <- pop2010_2020 %>%
   unite("GEOID", c("state", "county"), sep = "") %>%
   # Cleaning the data
   mutate(AGEGROUP = as.numeric(AGEGROUP),
@@ -97,10 +115,10 @@ e2010 <- getCensus(name="pep/charagegroups",
            DATE == "3" ~ 2010),
          RACE = case_when(
            RACE == "0" | HISP == "0" ~ "TOTAL",
-           RACE == "7" | HISP == "1" ~ "White, NH",
-           RACE == "8" | HISP == "1" ~ "Black, NH",
-           RACE %in% c("9","10","11") & HISP == "1" ~ "Other",
-           HISP == 2 ~ "Other")) %>%
+           RACE == "7" | HISP == "1" ~ "WHITE, NH",
+           RACE == "8" | HISP == "1" ~ "BLACK, NH",
+           RACE %in% c("9","10","11") & HISP == "1" ~ "OTHER, NH",
+           HISP == 2 ~ "HISP")) %>%
   filter(!is.na(RACE),
          !RACE == "TOTAL",
          !AGEGROUP == 0,
@@ -110,102 +128,79 @@ e2010 <- getCensus(name="pep/charagegroups",
   summarize(Population = sum(as.numeric(POP),na.rm = T)) %>%
   separate(GEONAME, c("county", "descript"), sep = " County") %>%
   ungroup() %>%
-  #group_by(GEOID, RACE, SEX, AGEGROUP, year) %>%
-  arrange(GEOID, RACE, SEX, AGEGROUP, year) %>%
-  #mutate(pop.5 = lag(Population, 5)) %>%
-  ungroup() %>%
   select(-descript)
 
-#   e1990 <- getCensus(name="pep/int_charagegroups", 
-#                  vintage = "1990", 
-#                  key = key, 
-#                  vars =c("POP", "YEAR", "RACE_SEX", "HISP", "AGEGRP"), 
-#                  region="COUNTY"
-#                  ,regionin="state:10") %>%
-#     unite("GEOID", c("state", "county"), sep = "") %>%
-#     mutate(AGEGROUP = as.numeric(AGEGRP),
-#            year = case_when(
-#              YEAR == "90" ~ 1990,
-#              YEAR == "91" ~ 1991,
-#              YEAR == "92" ~ 1992,
-#              YEAR == "93" ~ 1993,
-#              YEAR == "94" ~ 1994,
-#              YEAR == "95" ~ 1995,
-#              YEAR == "96" ~ 1996,
-#              YEAR == "97" ~ 1997,
-#              YEAR == "98" ~ 1998,
-#              YEAR == "99" ~ 1999),
-#            RACE = case_when(
-#              RACE_SEX %in% c("01", "02") | HISP =="1" ~ "White, NH",
-#              RACE_SEX %in% c("03", "04") | HISP == "1" ~ "Black, NH",
-#              RACE_SEX %in% c("05", "06", "07", "08") | HISP %in% c("1", "2") ~ "Other"),
-#            SEX = case_when(
-#              RACE_SEX %in% c("01", "03", "05", "07") ~ "1",
-#              RACE_SEX %in% c("02", "04", "06", "08") ~ "2")) %>%
-#     filter(!is.na(RACE),
-#            !RACE == "TOTAL",
-#            !AGEGROUP == 0,
-#            !SEX == 0) %>%
-#     group_by(GEOID, year, RACE, AGEGROUP, SEX) %>%
-#     summarize(Population = sum(as.numeric(POP),na.rm = T)) %>%
-#     na.omit()
-# e1990$county = "a"
 
-e20001 <- getCensus(name="pep/int_charagegroups", 
-                    vintage = "2000", 
-                    key = key, 
-                    vars =c("POP", "DATE", "SEX", "RACE", "AGEGROUP", "HISP", "GEONAME"), 
-                    region = "county:1",
-                    regionin = "state:10")
-e20002 <- getCensus(name="pep/int_charagegroups", 
-                    vintage = "2000", 
-                    key = key, 
-                    vars =c("POP", "DATE", "SEX", "RACE", "AGEGROUP", "HISP", "GEONAME"), 
-                    region = "county:3",
-                    regionin = "state:10")
-e20003 <- getCensus(name="pep/int_charagegroups", 
-                    vintage = "2000", 
-                    key = key, 
-                    vars =c("POP", "DATE", "SEX", "RACE", "AGEGROUP", "HISP", "GEONAME"), 
-                    region = "county:5",
-                    regionin = "state:10")
-e2000 <-rbind(e20001, e20002) %>%
-  rbind(., e20003) %>%
-  unite("GEOID", c("state", "county"), sep = "") %>%
-  mutate(AGEGROUP = as.numeric(AGEGROUP),
-         year = case_when(
-           DATE == "11" ~ 2009,
-           DATE == "10" ~ 2008,
-           DATE == "9" ~ 2007,
-           DATE == "8" ~ 2006,
-           DATE == "7" ~ 2005,
-           DATE == "6" ~ 2004,
-           DATE == "5" ~ 2003,
-           DATE == "4" ~ 2002,
-           DATE == "3" ~ 2001,
-           DATE == "2" ~ 2000),
-         RACE = case_when(
-           RACE == "0" | HISP == "0" ~ "TOTAL",
-           RACE == "1" | HISP == "1" ~ "White, NH",
-           RACE == "2" | HISP == "1" ~ "Black, NH",
-           RACE %in% c("9","10","11") & HISP == "1" ~ "Other",
-           HISP == 2 ~ "Other")) %>%
-  filter(!is.na(RACE),
-         !RACE == "TOTAL",
-         !AGEGROUP == 0,
-         !SEX == 0) %>%
-  group_by(GEOID, GEONAME, year, RACE, AGEGROUP, SEX) %>%
-  summarize(Population = sum(as.numeric(POP),na.rm = T)) %>%
-  separate(GEONAME, c("county", "descript"), sep = " County") %>%
-  ungroup() %>%
-  arrange(GEOID, RACE, SEX, AGEGROUP, year) %>%
-  ungroup() %>%
-  select(-descript) %>%
-  na.omit
+# write_csv(pop2010, "pop2010_2020.csv")
 
-cendat <- rbind(e2010, e2000) %>%
+
+cen2000 = function(x){
+  tryCatch({#print(this.county)
+    pop2000_2010 <- getCensus(name="pep/int_charagegroups", 
+                              vintage = "2000", 
+                              key = key, 
+                              vars =c("POP", "DATE", "SEX", "RACE", "AGEGROUP", "HISP", "GEONAME"), 
+                              region = paste0("county:",substr(x,3,5)),
+                              regionin = paste0("state:",substr(x,0,2)))
+    popdata <- pop2000_2010 %>%
+    unite("GEOID", c("state", "county"), sep = "") %>%
+      mutate(AGEGROUP = as.numeric(AGEGROUP),
+             year = case_when(
+               DATE == "12" ~ 2009,
+               DATE == "11" ~ 2008,
+               DATE == "10" ~ 2007,
+               DATE == "9" ~ 2006,
+               DATE == "8" ~ 2005,
+               DATE == "7" ~ 2004,
+               DATE == "6" ~ 2003,
+               DATE == "5" ~ 2002,
+               DATE == "4" ~ 2001,
+               DATE == "3" ~ 2000),
+             RACE = case_when(
+               RACE == "0" | HISP == "0" ~ "TOTAL",
+               RACE == "7" | HISP == "1" ~ "WHITE, NH",
+               RACE == "8" | HISP == "1" ~ "BLACK, NH",
+               RACE %in% c("9","10","11") & HISP == "1" ~ "OTHER, NH",
+               HISP == 2 ~ "HISP")) %>%
+      filter(!is.na(RACE),
+             !RACE == "TOTAL",
+             !AGEGROUP == 0,
+             !SEX == 0,
+             DATE >= 3) %>%
+      group_by(GEOID, GEONAME, year, RACE, AGEGROUP, SEX) %>%
+      dplyr::summarise(Population = sum(as.numeric(POP), na.rm = T)) %>%
+       separate(GEONAME, c("county", "descript"), sep = " County") %>%
+       ungroup() %>%
+       select(-descript)
+      # group_by(GEOID, RACE, SEX, AGEGROUP, year) %>%
+      # arrange(GEOID, RACE, SEX, AGEGROUP, year) %>%
+      # #mutate(pop.5 = lag(Population, 5)) %>%
+      # ungroup() %>%
+      # select(-descript)
+    return(popdata)
+  }
+  , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+
+# x = unlist(list("10001", "13001"))
+# x = unlist(list("10001"))
+# dat <- lapply(x, cen2000)
+start_time <- Sys.time()
+dat <- mclapply(GEOID, cen2000, mc.cores = (detectCores() - 1))
+pop2000_2010 <- rbindlist(dat)
+end_time <- Sys.time()
+(elapsed_time <- end_time - start_time)
+
+# write_csv(pop2000_2010, "pop2000_2010.csv")
+
+pop2010_2020 <- read_csv("pop2010_2020.csv")
+pop2000_2010 <- read_csv("pop2000_2010.csv")
+
+cendat <- rbind(pop2010_2020, pop2000_2010) %>%
   #bind_rows(., e1990) %>%
-  mutate(countyrace = paste0(GEOID, "_", RACE))
+  mutate(countyrace = paste0(GEOID, "_", RACE)) %>%
+  na.omit
 
 K05_pop <- cendat %>%
   #mutate(AGEGROUP = if_else(AGEGROUP <18, AGEGROUP,17)) %>%
@@ -217,7 +212,7 @@ K05_pop <- cendat %>%
 CCRs<- cendat %>%
   mutate(AGEGROUP = paste0("X", AGEGROUP)) %>%
   spread(AGEGROUP, Population) %>%
-  arrange(GEOID,RACE, SEX,year) %>%
+  arrange(GEOID, RACE, SEX, year) %>%
   mutate(ccr01 = X2 / lag(X1, 5),
          ccr02 = X3 / lag(X2, 5),
          ccr03 = X4 / lag(X3, 5),
@@ -237,6 +232,12 @@ CCRs<- cendat %>%
          ccr17 = X18 / (lag(X17, 5) + lag(X18, 5))) %>%
   filter(year >= 2005)
 
+z <- filter(CCRs, GEOID == "01041")
+
+CCRs[mapply(is.infinite, CCRs)] <- NA
+CCRs[mapply(is.nan, CCRs)] <- NA
+CCRs[is.na(CCRs)] <- 1
+
 newborns <- cendat %>%
   ungroup() %>%
   filter(AGEGROUP == 1) %>%
@@ -252,6 +253,9 @@ childbearing <-cendat %>%
   left_join(., newborns) %>%
   mutate(fertrat = Newborns/Women1550)
 
+childbearing[mapply(is.infinite, childbearing)] <- NA
+childbearing[is.na(childbearing)] <-1
+
 
 launch_year <- 2016
 mylist<-unlist(list(unique(K05_pop$countyrace)))
@@ -264,7 +268,7 @@ STEPS<-10
 BASEANDSTEPS<-STEPS+1
 WINDOW <-20
 
-# x = "10001_White, NH"
+ x = "01011_BLACK, NH"
 project = function(x){
   tryCatch({#print(this.county)
     print(x)
@@ -596,6 +600,11 @@ project = function(x){
     projf$SEX = 2
     proj <-rbind(projm, projf)
     proj$countyrace <-x
+    proj2 <- proj %>%
+      group_by(countyrace, YEAR, Var1, SEX) %>%
+      dplyr::summarise(Pop50 = quantile(as.numeric(Freq), 0.5, na.rm=T),
+                Pop10 = quantile(as.numeric(Freq), 0.1, na.rm=T),
+                Pop90 = quantile(as.numeric(Freq), 0.9, na.rm=T))
     
     #z<- abind(p01m, p02m, p03m, p04m, p05m, p06m, p07m, p08m, p09m, p10m,along=2)
     
@@ -603,15 +612,21 @@ project = function(x){
     #KTemp<- data.frame(array(c(p01m, p02m, p03m, p04m, p05m, p06m, p07m, p08m, p09m, p10m), c(ITER, BASEANDSTEPS)))
     #KTemp$countyrace <- x
     
-    return(proj)
+    return(proj2)
   }
   , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
 }
 
+start_time <- Sys.time()
 d = mclapply(mylist, project, mc.cores = (detectCores() - 1))
 KT <- rbindlist(d)
-# end_time <- Sys.time()
-# (time_elapsed <- (end_time - start_time))
+end_time <- Sys.time()
+(time_elapsed <- (end_time - start_time)) #<---- 5.6 hours, on my home computer (16gig Ram, 4-cores) 01/17/2018
+
+# write_csv(KT, "popproj_01172018.csv")
+
+KT <- read_csv("popproj_01172018.csv")
+
 
 cendat2 <-cendat %>%
   group_by(GEOID, year) %>%
@@ -623,10 +638,7 @@ cendat2 <-cendat %>%
 Kpops <- KT %>%
   separate(countyrace, c("county", "Race"), sep = "_")%>%
   separate(Var1, c("drop", "agegrp"), sep = "a") %>%
-  
-  rename(Iter = Var3,
-         Population = Freq) %>%
-  select(-drop, Var2)
+  group_by(YEAR, county)
 
 
 KTHA<-  setDT(KT2)[, Iter := sequence(.N), by = c("county", "Race")]
@@ -638,35 +650,39 @@ KTHD <- Kpops %>%
   # filter(county =="10001",
   #        Iter == "A", 
   #        YEAR == 2021)
-  group_by(county, Iter, YEAR) %>%
+  group_by(county, YEAR) %>%
   #ungroup() %>%
-  summarise(Population = sum(Population, na.rm=T)) %>%
+  summarise(Pop50 = sum(Pop50, na.rm=T),
+            Pop10 = sum(Pop10, na.rm = T),
+            Pop90 = sum(Pop90, na.rm = T)) %>%
   rename(Year = YEAR)
 
-
-this.county = "10005"
-
-pdf(file = "totpop.pdf", width=11, height=8.5)  
+z <- filter(KTHD, county == "01041")
+this.county = "01015"
+start_time <- Sys.time()
+pdf(file = "totpop_01172018.pdf", width=11, height=8.5)  
 for(this.county in unique(cendat$GEOID)){
-  tryCatch({     
-    KTH3 <- filter(KTHD, county == this.county) %>%
-      group_by(Year) %>%
-      summarize(Pop50 = quantile(as.numeric(Population), 0.5, na.rm=T),
-                Pop10 = quantile(as.numeric(Population), 0.1, na.rm=T),
-                Pop90 = quantile(as.numeric(Population), 0.9, na.rm=T))
+  tryCatch({    
+    KTH3 <- filter(KTHD, county == this.county)
+    cendat3 <- filter(cendat2, county == this.county)
+    # %>%
+    #   group_by(Year) %>%
+    #   summarize(Pop50 = quantile(as.numeric(Population), 0.5, na.rm=T),
+    #             Pop10 = quantile(as.numeric(Population), 0.1, na.rm=T),
+    #             Pop90 = quantile(as.numeric(Population), 0.9, na.rm=T))
     
-    k_iters <- KTHD %>%
-      filter(county == this.county) %>%
-      subset(Iter %in% sample(levels(Iter), 20))
-    
+    # k_iters <- KTHD %>%
+    #   filter(county == this.county) %>%
+    #   subset(Iter %in% sample(levels(Iter), 20))
+    # cendat3 <- filter(cendat2, county == this.county)
     
     
     
     #pdf(file = "totpop.pdf", width=11, height=8.5)
     print(
-      ggplot(data = k_iters, aes(x=Year)) +
-        geom_line( aes(y=Population, group = Iter),  color='gray') +
-        geom_ribbon(data = KTH3, aes(ymin = Pop10, ymax= Pop90), fill="green", alpha=0.5, show.legend = FALSE) +
+      ggplot(data = cendat3, aes(x=Year)) +
+        geom_line( aes(y=Population),  color='gray') +
+        #geom_ribbon(data = KTH3, aes(ymin = Pop10, ymax= Pop90), fill="green", alpha=0.5, show.legend = FALSE) +
         geom_line(data = KTH3, aes(y = Pop50), lwd =1, color = "red") +
         geom_line(data = filter(cendat2, county == this.county), aes(y = Population), lwd =1, color="Black") +
         theme_bw() +
@@ -681,7 +697,7 @@ for(this.county in unique(cendat$GEOID)){
         geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop10[which.max(KTH3$Year)]*1.02, label = paste0("10 percentile: ", format(round(KTH3$Pop10[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
         labs(x='Year', 
              y='Population',
-             title = paste0(this.county,': TOTAL POPULATION: HISTORICAL (BLACK) AND ',ITER , ' FORECASTS \n WITH 90% CONFIDENCE INTERVALS (GREEN)'))
+             title = paste0(this.county,': TOTAL POPULATION: HISTORICAL (BLACK LINE) AND ',ITER , ' FORECASTS \n WITH 90% CONFIDENCE INTERVALS (GREEN)'))
     )
     # ggsave(file= paste("totpop_", this.county, ".pdf",sep=""),width=11, height=8.5)
     # dev.off()
