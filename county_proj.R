@@ -658,7 +658,7 @@ KTHD <- Kpops %>%
   rename(Year = YEAR)
 
 z <- filter(KTHD, county == "01041")
-this.county = "01015"
+this.county = "01041"
 start_time <- Sys.time()
 pdf(file = "totpop_01172018.pdf", width=11, height=8.5)  
 for(this.county in unique(cendat$GEOID)){
@@ -682,19 +682,19 @@ for(this.county in unique(cendat$GEOID)){
     print(
       ggplot(data = cendat3, aes(x=Year)) +
         geom_line( aes(y=Population),  color='gray') +
-        #geom_ribbon(data = KTH3, aes(ymin = Pop10, ymax= Pop90), fill="green", alpha=0.5, show.legend = FALSE) +
+        geom_ribbon(data = KTH3, aes(ymin = Pop10, ymax= Pop90), fill="green", alpha=0.5, show.legend = FALSE) +
         geom_line(data = KTH3, aes(y = Pop50), lwd =1, color = "red") +
         geom_line(data = filter(cendat2, county == this.county), aes(y = Population), lwd =1, color="Black") +
         theme_bw() +
         scale_y_continuous(label=comma,
-                           limits = c(min(KTH3$Pop10)/2,max(KTH3$Pop90)*1.5),
+                           limits = c(min(KTH3$Pop50)/2,max(KTH3$Pop50)*1.5),
                            expand = c(0,0)) +
         scale_x_continuous(limits = c(1970,max(KTH3$Year)), 
                            expand = c(0, 0),
                            breaks = c(1970, 1980, 1990, 2000, 2010, 2020, 2030, 2040, 2050, 2060, 2070)) +
         geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop50[which.max(KTH3$Year)]*1.02, label = paste0("50 percentile: ", format(round(KTH3$Pop50[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
-        geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop90[which.max(KTH3$Year)]*1.02, label = paste0("90 percentile: ", format(round(KTH3$Pop90[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
-        geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop10[which.max(KTH3$Year)]*1.02, label = paste0("10 percentile: ", format(round(KTH3$Pop10[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
+        geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop50[which.max(KTH3$Year)]*1.5, label = paste0("90 percentile: ", format(round(KTH3$Pop90[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
+        geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop50[which.max(KTH3$Year)]*0.5, label = paste0("10 percentile: ", format(round(KTH3$Pop10[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
         labs(x='Year', 
              y='Population',
              title = paste0(this.county,': TOTAL POPULATION: HISTORICAL (BLACK LINE) AND ',ITER , ' FORECASTS \n WITH 90% CONFIDENCE INTERVALS (GREEN)'))
