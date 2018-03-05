@@ -73,34 +73,74 @@ key <- census_api_key("0206e3f2924a424be8722887fd0a49cea6308a7e")
 key <- "0206e3f2924a424be8722887fd0a49cea6308a7e"
 
 
-apis <- listCensusApis()
+#apis <- listCensusApis()
 
 vintage_year = "2016" #<----------------------------------------------------------- INPUT VINTAGE ESTIMATE YEAR HERE
 vintage_end = "9"     #<----------------------------------------------------------- INPUT VINTAGE DATE
 
-list <- listCensusMetadata(name = "sf1", vintage = "2010", type ="variables")
-list <- makeVarlist(name = "pep/charagegroups", vintage = "2015", find = "total", output = "list")
+#list <- listCensusMetadata(name = "sf1", vintage = "2010", type ="variables")
+#list <- makeVarlist(name = "pep/charagegroups", vintage = "2015", find = "total", output = "list")
 
 fipslist <- read_csv("fipslist.csv")
 stateid = unlist(list(unique(fipslist$STATEID)))
-GEOID = unlist(list(fipslist$FIPS))
-# x = unlist(list("10", "13"))
+split(fipslist, ceiling(seq_along(unique(fipslist$STATEID))/20))
+
+x = seq_along(unique(fipslist$STATEID))
+max = 15
+d  <- split(unique(x), ceiling(x/max))
+# d <- chunk(stateid, 1,51, 10)
+
+d1 <- unlist(list(d[1]))
+d2 <- unlist(list(d[2]))
+d3 <- unlist(list(d[3]))
+d4 <-unlist(list(d[4]))
+# d5 <-unlist(list(d[5]))
+# d6 <-unlist(list(d[6]))
+# d1 <- "10"
+# GEOID = unlist(list(fipslist$FIPS))
+# x = unlist(list("10"))
 cen2010 = function(x){
   tryCatch({#print(this.county)
-    a <- getCensus(name="pep/charagegroups", 
+    pop2010_2020 <- getCensus(name="pep/charagegroups", 
                    vintage = vintage_year, 
                    key = key, 
                    vars =c("POP", "DATE", "DATE_DESC","SEX", "HISP", "RACE", "AGEGROUP", "GEONAME"), 
                    region="COUNTY:*",
-                   regionin=paste0("state:", x)) 
-    return(a)
+                   regionin=paste0("state:", x))
+     popdata <- pop2010_2020 %>%
+       unite("GEOID", c("state", "county"), sep = "") %>%
+       mutate(AGEGROUP = as.numeric(AGEGROUP),
+              DATE = as.numeric(DATE)) %>%
+      mutate(AGEGROUP = as.numeric(AGEGROUP),
+             year = case_when(
+               DATE == 9 ~ 2016,
+               DATE == 8 ~ 2015,
+               DATE == 7 ~ 2014,
+               DATE == 6 ~ 2013,
+               DATE == 5 ~ 2012,
+               DATE == 4 ~ 2011,
+               DATE == 3 ~ 2010),
+             RACE = case_when(
+               RACE == "0" & HISP == "0" ~ "TOTAL",
+               RACE == "7" & HISP == "1" ~ "WHITE, NH",
+               RACE == "8" & HISP == "1" ~ "BLACK, NH",
+               RACE %in% c("9","10","11") & HISP == "1" ~ "OTHER, NH",
+               HISP == 2 ~ "HISP")) %>%
+      filter(!is.na(RACE),
+             !RACE == "TOTAL",
+             !AGEGROUP == 0,
+             !SEX == 0,
+             DATE >= 3) %>%
+      group_by(GEOID, GEONAME, year, RACE, AGEGROUP, SEX) %>%
+      dplyr::summarise(Population = sum(as.numeric(POP),na.rm = T)) %>%
+      separate(GEONAME, c("county", "descript"), sep = " County") %>%
+      ungroup() %>%
+      select(-descript)
+    return(popdata)
   }
   , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
 }
-
-dat <- mclapply(stateid, cen2010, mc.cores = (detectCores() - 1))
-pop2010_2020 <- rbindlist(dat)
-
+# cen2010clean = function(x){
 pop2010 <- pop2010_2020 %>%
   unite("GEOID", c("state", "county"), sep = "") %>%
   # Cleaning the data
@@ -114,9 +154,9 @@ pop2010 <- pop2010_2020 %>%
            DATE == "4" ~ 2011,
            DATE == "3" ~ 2010),
          RACE = case_when(
-           RACE == "0" | HISP == "0" ~ "TOTAL",
-           RACE == "7" | HISP == "1" ~ "WHITE, NH",
-           RACE == "8" | HISP == "1" ~ "BLACK, NH",
+           RACE == "0" & HISP == "0" ~ "TOTAL",
+           RACE == "7" & HISP == "1" ~ "WHITE, NH",
+           RACE == "8" & HISP == "1" ~ "BLACK, NH",
            RACE %in% c("9","10","11") & HISP == "1" ~ "OTHER, NH",
            HISP == 2 ~ "HISP")) %>%
   filter(!is.na(RACE),
@@ -129,9 +169,41 @@ pop2010 <- pop2010_2020 %>%
   separate(GEONAME, c("county", "descript"), sep = " County") %>%
   ungroup() %>%
   select(-descript)
+return(pop2010)
+}
+
+ (start_time <- Sys.time())
+#  dat1 <- mclapply(d1, cen2010, mc.cores = (detectCores() - 1))
+#  pop2010_2020 <- rbindlist(dat1)
+# # pop2010 <- cen2010clean(pop2010_2020)
+#  write_csv(pop2010_2020, "pop2010_2010.csv")
+
+# dat2 <- mclapply(d2, cen2010, mc.cores = (detectCores() - 1))
+# pop2010_2020 <- rbindlist(dat2)
+# # pop2010 <- cen2010clean(pop2010_2020)
+# write_csv(pop2010_2020, "pop2010_20102.csv")
+
+# dat3 <- mclapply(d3, cen2010, mc.cores = (detectCores() - 1))
+# pop2010_2020 <- rbindlist(dat3)
+# write_csv(pop2010_2020, "pop2010_20103.csv")
+
+dat4 <- mclapply(d4, cen2010, mc.cores = (detectCores() - 1))
+pop2010 <- rbindlist(dat1)
+write_csv(pop2010, "pop2010_20104.csv")
+
+# dat5 <- mclapply(d5, cen2010, mc.cores = (detectCores() - 1))
+# pop2010_2020 <- rbindlist(dat1)
+# pop2010 <- cen2010clean(pop2010_2020)
+# write_csv(pop2010, "pop2010_20105.csv")
+
+# dat6 <- mclapply(d6, cen2010, mc.cores = (detectCores() - 1))
+# pop2010_2020 <- rbindlist(dat1)
+# pop2010 <- cen2010clean(pop2010_2020)
+# write_csv(pop2010, "pop2010_20106.csv")
+
+(end_time <- Sys.time() - start_time)
 
 
-# write_csv(pop2010, "pop2010_2020.csv")
 
 
 cen2000 = function(x){
@@ -295,23 +367,23 @@ project = function(x){
     BA16m[1,]<-mean(filter(CCRm, year == (max(CCRm$year)))$ccr17, na.rm=T)
     
     for(i in 2:BASEANDSTEPS){
-      BA00m[i,]<-BA00m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr01, na.rm=T))
-      BA01m[i,]<-BA01m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr02, na.rm=T))
-      BA02m[i,]<-BA02m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr03, na.rm=T))
-      BA03m[i,]<-BA03m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr04, na.rm=T))
-      BA04m[i,]<-BA04m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr05, na.rm=T))
-      BA05m[i,]<-BA05m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr06, na.rm=T))
-      BA06m[i,]<-BA06m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr07, na.rm=T))
-      BA07m[i,]<-BA07m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr08, na.rm=T))
-      BA08m[i,]<-BA08m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr09, na.rm=T))
-      BA09m[i,]<-BA09m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr10, na.rm=T))
-      BA10m[i,]<-BA10m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr11, na.rm=T))
-      BA11m[i,]<-BA11m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr12, na.rm=T))
-      BA12m[i,]<-BA12m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr13, na.rm=T))
-      BA13m[i,]<-BA13m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr14, na.rm=T))
-      BA14m[i,]<-BA14m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr15, na.rm=T))
-      BA15m[i,]<-BA15m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr16, na.rm=T))
-      BA16m[i,]<-BA16m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr16, na.rm=T))
+      BA00m[i,]<-BA00m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr01, na.rm=T))/2
+      BA01m[i,]<-BA01m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr02, na.rm=T))/2
+      BA02m[i,]<-BA02m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr03, na.rm=T))/2
+      BA03m[i,]<-BA03m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr04, na.rm=T))/2
+      BA04m[i,]<-BA04m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr05, na.rm=T))/2
+      BA05m[i,]<-BA05m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr06, na.rm=T))/2
+      BA06m[i,]<-BA06m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr07, na.rm=T))/2
+      BA07m[i,]<-BA07m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr08, na.rm=T))/2
+      BA08m[i,]<-BA08m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr09, na.rm=T))/2
+      BA09m[i,]<-BA09m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr10, na.rm=T))/2
+      BA10m[i,]<-BA10m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr11, na.rm=T))/2
+      BA11m[i,]<-BA11m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr12, na.rm=T))/2
+      BA12m[i,]<-BA12m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr13, na.rm=T))/2
+      BA13m[i,]<-BA13m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr14, na.rm=T))/2
+      BA14m[i,]<-BA14m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr15, na.rm=T))/2
+      BA15m[i,]<-BA15m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr16, na.rm=T))/2
+      BA16m[i,]<-BA16m[i-1,]+rnorm(ITER,0,sd(filter(CCRm, year >= (max(CCRm$year)-WINDOW))$ccr16, na.rm=T))/2
     }
     
     ###   Creating the diagonal for the survival rates
@@ -388,23 +460,23 @@ project = function(x){
     BA16f[1,]<-mean(filter(CCRf, year == (max(CCRf$year)))$ccr17, na.rm=T)
     
     for(i in 2:BASEANDSTEPS){
-      BA00f[i,]<-BA00f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr01, na.rm=T))
-      BA01f[i,]<-BA01f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr02, na.rm=T))
-      BA02f[i,]<-BA02f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr03, na.rm=T))
-      BA03f[i,]<-BA03f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr04, na.rm=T))
-      BA04f[i,]<-BA04f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr05, na.rm=T))
-      BA05f[i,]<-BA05f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr06, na.rm=T))
-      BA06f[i,]<-BA06f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr07, na.rm=T))
-      BA07f[i,]<-BA07f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr08, na.rm=T))
-      BA08f[i,]<-BA08f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr09, na.rm=T))
-      BA09f[i,]<-BA09f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr10, na.rm=T))
-      BA10f[i,]<-BA10f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr11, na.rm=T))
-      BA11f[i,]<-BA11f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr12, na.rm=T))
-      BA12f[i,]<-BA12f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr13, na.rm=T))
-      BA13f[i,]<-BA13f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr14, na.rm=T))
-      BA14f[i,]<-BA14f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr15, na.rm=T))
-      BA15f[i,]<-BA15f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr16, na.rm=T))
-      BA16f[i,]<-BA16f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr16, na.rm=T))
+      BA00f[i,]<-BA00f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr01, na.rm=T))/2
+      BA01f[i,]<-BA01f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr02, na.rm=T))/2
+      BA02f[i,]<-BA02f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr03, na.rm=T))/2
+      BA03f[i,]<-BA03f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr04, na.rm=T))/2
+      BA04f[i,]<-BA04f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr05, na.rm=T))/2
+      BA05f[i,]<-BA05f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr06, na.rm=T))/2
+      BA06f[i,]<-BA06f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr07, na.rm=T))/2
+      BA07f[i,]<-BA07f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr08, na.rm=T))/2
+      BA08f[i,]<-BA08f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr09, na.rm=T))/2
+      BA09f[i,]<-BA09f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr10, na.rm=T))/2
+      BA10f[i,]<-BA10f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr11, na.rm=T))/2
+      BA11f[i,]<-BA11f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr12, na.rm=T))/2
+      BA12f[i,]<-BA12f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr13, na.rm=T))/2
+      BA13f[i,]<-BA13f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr14, na.rm=T))/2
+      BA14f[i,]<-BA14f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr15, na.rm=T))/2
+      BA15f[i,]<-BA15f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr16, na.rm=T))/2
+      BA16f[i,]<-BA16f[i-1,]+rnorm(ITER,0,sd(filter(CCRf, year >= (max(CCRf$year)-WINDOW))$ccr16, na.rm=T))/2
     }
     
     ###   Creating the diagonal for the survival rates
@@ -640,11 +712,11 @@ Kpops <- KT %>%
   separate(Var1, c("drop", "agegrp"), sep = "a") %>%
   group_by(YEAR, county)
 
-
-KTHA<-  setDT(KT2)[, Iter := sequence(.N), by = c("county", "Race")]
-KTHB <- KTHA %>%
-  mutate(county = trimws(county),
-         Race = trimws(Race))
+# 
+# KTHA<-  setDT(KT2)[, Iter := sequence(.N), by = c("county", "Race")]
+# KTHB <- KTHA %>%
+#   mutate(county = trimws(county),
+#          Race = trimws(Race))
 
 KTHD <- Kpops %>%
   # filter(county =="10001",
@@ -660,7 +732,7 @@ KTHD <- Kpops %>%
 z <- filter(KTHD, county == "01041")
 this.county = "01041"
 start_time <- Sys.time()
-pdf(file = "totpop_01172018.pdf", width=11, height=8.5)  
+pdf(file = "totpop_01192018.pdf", width=11, height=8.5)  
 for(this.county in unique(cendat$GEOID)){
   tryCatch({    
     KTH3 <- filter(KTHD, county == this.county)
@@ -687,11 +759,11 @@ for(this.county in unique(cendat$GEOID)){
         geom_line(data = filter(cendat2, county == this.county), aes(y = Population), lwd =1, color="Black") +
         theme_bw() +
         scale_y_continuous(label=comma,
-                           limits = c(min(KTH3$Pop50)/2,max(KTH3$Pop50)*1.5),
+                           limits = c(min(KTH3$Pop10)/2,filter(KTH3, Year == 2051)$Pop90),
                            expand = c(0,0)) +
-        scale_x_continuous(limits = c(1970,max(KTH3$Year)), 
+        scale_x_continuous(limits = c(1970,2050), 
                            expand = c(0, 0),
-                           breaks = c(1970, 1980, 1990, 2000, 2010, 2020, 2030, 2040, 2050, 2060, 2070)) +
+                           breaks = c(1970, 1980, 1990, 2000, 2010, 2020, 2030, 2040, 2055, 2060, 2070)) +
         geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop50[which.max(KTH3$Year)]*1.02, label = paste0("50 percentile: ", format(round(KTH3$Pop50[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
         geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop50[which.max(KTH3$Year)]*1.5, label = paste0("90 percentile: ", format(round(KTH3$Pop90[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
         geom_text(data = KTH3, aes(x = 1978, y = KTH3$Pop50[which.max(KTH3$Year)]*0.5, label = paste0("10 percentile: ", format(round(KTH3$Pop10[which.max(KTH3$Year)], 0), nsmall=0, big.mark=",")))) +
