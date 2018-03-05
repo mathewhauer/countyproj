@@ -7,21 +7,21 @@ output:
     fig_caption: true
     latex_engine: pdflatex
     template: LATEX/svm-latex-ms.tex
-title: "U.S. County level population projections by age, sex, and race for the period 2016-2066"
+title: "U.S. County level probabilistic population projections by age, sex, and race for the period 2016-2066"
 thanks: "The data and code that supports this analysis are available in the supplementary materials."
 author:
 - name: Mathew E. Hauer ^1^*
   affiliation: University of Georgia
 
-abstract: "I provide county-level population projections by age, sex, and race in five-year intervals for the period 2016-2066 for 3,136 counties. Using historic U.S. census data in temporally rectified county boundaries and race groups for the period 1990-2016, I calculate cohort-change ratios (CCRs) and cohort-change differences (CCDs) for eighteen five-year age groups (0-85+), two sex groups (Male and Female), and four race groups (White NH, Black NH, Other NH, Hispanic). I then project these CCRs/CCDs using Unobserved Components Models as inputs into leslie matrix population projection models for a blended CCD/CCR population projection. My ex-post facto evaluations using three race groups (White, Black, Other) on the 1980-2000 base period evaluated at 2005, 2010, and 2015  demonstrate confidence in the accuracy of the projections. These data have numerous potential uses and can serve as inputs for addressing questions involving sub-national population change in the United States."
-#keywords: ""
+abstract: "I provide county-level population projections by age, sex, and race in five-year intervals for the period 2016-2066 for 3,136 counties. Using historic U.S. census data in temporally rectified county boundaries and race groups for the period 1990-2016, I calculate cohort-change ratios (CCRs) and cohort-change differences (CCDs) for eighteen five-year age groups (0-85+), two sex groups (Male and Female), and four race groups (White NH, Black NH, Other NH, Hispanic) in over 3,000 U.S counties. I then project these CCRs/CCDs using Unobserved Components Models as inputs into leslie matrix population projection models for a blended CCD/CCR population projection. My ex-post facto evaluations using three race groups (White, Black, Other) on the 1969-2000 base period evaluated at 2005, 2010, and 2015 demonstrate confidence in the accuracy of the projections. These data have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
+keywords: "Population projections; subnational; demographic change; cohort-change ratios"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 geometry: margin=1in
 #fontfamily: mathpazo
 fontsize: 12pt
 spacing: double
 bibliography: LATEX/mybibfile.bib
-biblio-style: nature
+biblio-style: apsr
 # use apsr or nature
 header-includes:
 - \usepackage[all]{nowidow}
@@ -182,17 +182,17 @@ z<- filter(z,
 
 # BACKGROUND & SUMMARY
 
-Population projections have a long history in the social and physical sciences as a means of examining demographic change, planning for the future, and to inform decision making in a variety of applications [CITES]. 
+Population projections have a long history in the social and physical sciences as a means of examining demographic change, planning for the future, and to inform decision making in a variety of applications [@smith2006state; @passel2008us; @hebert2003alzheimer; @hales2002potential; @hauer2016millions; @gerland2014; @colby2017projections]. 
 
-Producing high-quality, highly-detailed population projections is a challenging endeavor and no rigourous set of U.S. national projections currently exists. With such a large need for sub-national projections and to better understand the changing demographics of the U.S. population, I sought to produce such a set of high-quality, highly-detailed projections and make both the R code and subsequent projections available for dissemination with a wide audience. Here, I present age-sex-race specific population projections for all U.S. counties and their uncertainty, an ex-post facto evaluation of the projection methodology, and details on the calculations of these projections. I generate these projections using a historic time series of population estimates for the period 1990-2016 in temporally rectified county boundaries and race groupings using leslie matrices populated by cohort-change ratios (CCRs) and cohort-change differences (CCDs) projected through the use of Unobserved Component Models (UCMs) in a combined additive/multiplicative model.
+Producing high-quality, highly-detailed population projections is a challenging endeavor and no rigourous set of U.S. sub-national projections by age, sex, and race currently exists. With such a large need for sub-national projections and to better understand the changing demographics of the U.S. population, I sought to produce such a set of high-quality, highly-detailed projections and make both the R code and subsequent projections available for dissemination with a wide audience. Here, I present age-sex-race specific population projections for all U.S. counties and their uncertainty, an ex-post facto evaluation of the projection methodology, and details on the calculations of these projections. I generate these projections using a historic time series of population estimates for the period 1990-2016 [@wonder2016bridged] in temporally rectified county boundaries and race groupings using leslie matrices populated by cohort-change ratios (CCRs) [@baker2017cohort] and cohort-change differences (CCDs) projected through the use of Unobserved Component Models (UCMs) [@harvey1990forecasting] in a combined additive/multiplicative model.
 
-To ensure quality projections, I employ the use of ex-post-facto evaluations of the projection accuracy for three variant models: purely additive with CCDs, purely multiplicative with CCRs, and a blended model with CCDs in areas projected to grow and CCRs in areas projected to decline. I report the accuracy, bias, and uncertainties associated with these variants using absolute percent error, algebraic percent error, and the number of observations where the observed population is within the 80th percentile projection interval. Overall, the errors reported here are on par with deterministic cohort-component population projection models undertaken at the county level in individual states [CITES] and with Bayesian cohort-component projection models undertaken at the national scale [CITES].
+To ensure quality projections, I employ the use of ex-post-facto evaluations of the projection accuracy for three variant models: purely additive with CCDs, purely multiplicative with CCRs, and a blended model with CCDs in areas projected to grow and CCRs in areas projected to decline. I report the accuracy, bias, and uncertainties associated with these variants using absolute percent error, algebraic percent error, and the number of observations where the observed population is within the 80th percentile projection interval. Overall, the errors reported here are on par with or better than deterministic cohort-component population projection models undertaken at the sub-national leveland with Bayesian population projection models undertaken at various national and sub-national scales [@smith2003evaluation; @wilson2016evaluation; @smith1997further; @rayer2008population; @wilson2005recent; @booth2006demographic; @wilson2012forecast;@raftery2012bayesian; @boyle2010projection; @daponte1997bayesian; @lutz1996probabilistic].
 
 These projections, like all projections, involve the use of assumptions about future events that may or may not occur. Users of these projections should be aware that although the projections have been prepared with the use of standard methodologies, documentation of their creation, open-source computer code, and extensive evaluations of their accuracy and uncertainty, they may not accurately project the future population of a state, county, age, sex, or race group. The projections are based on historical trends and current estimates. These projections should be used only with full awareness of the inherent limitations of population projections in general and with knowledge of the procedures and assumptions described in this document. 
 
 # METHODS
 
-The cohort-component method is the most accepted methodology to produce population projections. The method makes use of all three population component processes (fertility, mortality, and migration) and applies them across varying population cohorts to arrive at a future population. Equation \ref{eq:cohortcomponent} outlines the basic structure of a cohort-component model.
+The cohort-component method is the most accepted methodology to produce population projections [@smith2006state; @preston2000demography]. The method makes use of all three population component processes (fertility, mortality, and migration) and applies them across varying population cohorts to arrive at a future population. Equation \ref{eq:cohortcomponent} outlines the basic structure of a cohort-component model.
 
 \begin{equation}\label{eq:cohortcomponent}
 P_{t+1} = P_t + B_t - D_t + M_{t,in} - M_{t,out}
@@ -200,9 +200,9 @@ P_{t+1} = P_t + B_t - D_t + M_{t,in} - M_{t,out}
 
 Where $P_t$ is the population at time $t$, $B_t$ is the births at time $t$, $D_t$ is the deaths at time $t$, and $M_{t, in/out}$ refers to in- or out-migration at time $t$.
 
-Cohort-component requires data on each component process disaggregated by age, sex, and race. Certain elements of these data can be difficult to obtain for complete national coverage of sub-national geographies. There is no comprehensive dataset of gross migration estimates by age, sex, and race for all U.S. counties. Birth and death data are typically obtained through the National Center of Health Statistics (NCHS) vital events registration databases. Birth data, however, are only available for counties with populations greater than 100k. These limitations surrounding fertility and migration render a universal county-level population projection difficult, if not impossible, to complete using publicly available datasets.
+Cohort-component requires data on each component process disaggregated by the dimensionality of the population to be projected. To produce detailed projections by age, sex, and race, detailed data age, sex, and race. Certain elements of these data can be difficult to obtain for complete national coverage of sub-national geographies. There is no comprehensive dataset of gross migration estimates by age, sex, and race for all U.S. counties. Birth and death data are typically obtained through the National Center of Health Statistics (NCHS) vital events registration databases [@martin2018births]. Birth data, however, are only available for counties with populations greater than 100k and Death data are only available for cells with more than 10 deaths [@tiwari2014impact]. These limitations surrounding fertility, mortality, and migration render a universal county-level population projection difficult, if not impossible, to complete using publicly available datasets.
 
-An alternative to cohort-component is the Hamilton-Perry method [CITES], which uses cohort-change ratios (CCRs) in place of components to project populations. The basic CCR equation is found in equation \ref{eq:ccr}.
+An alternative to cohort-component is the Hamilton-Perry method [@swanson2010forecasting; @baker2017cohort ], which uses cohort-change ratios (CCRs) in place of components to project populations. The basic CCR equation is found in equation \ref{eq:ccr}.
 
 \begin{eqnarray}\label{eq:ccr}
 CCR_{t} & = & \frac {_nP_{x,t}} {_nP_{x-y,t-1}}\\
@@ -245,7 +245,7 @@ CCDs are just as parimonious as CCRs but have the additional advantage of produc
 
 ## Projecting CCRs and CCDs
 
-It is unlikely that CCRs/CCDs will remain unchanged over the projection horizon. To account for possible changes in CCRs/CCDs, I employ the use of an Unobserved Components Model (UCM) for forecasting equally spaced univariate time series data (Harvey 1990). UCMs decompose a time series into components such as trends, seasons, cycles, and regression effects and are designed to capture the features of the series that explain and predict its behavior. UCMs are similar to dynamic models in Bayesian time series forecasting (Harrison and West 1999). All projections were undertaken in R using the RUCM package. 
+It is unlikely that CCRs/CCDs will remain unchanged over the projection horizon. To account for possible changes in CCRs/CCDs, I employ the use of an Unobserved Components Model (UCM) for forecasting equally spaced univariate time series data [@harvey1990forecasting]. UCMs decompose a time series into components such as trends, seasons, cycles, and regression effects and are designed to capture the features of the series that explain and predict its behavior. UCMs are similar to dynamic models in Bayesian time series forecasting[@west1996bayesian]. All projections were undertaken in R using the RUCM package. 
 
 The basic structural model (BSM) is the sum of its stochastic components. Here I use an irregular, level, and a random error component and it can be described as:
   
@@ -267,7 +267,7 @@ These equations specify a trend where the level $\mu_t$ vary over time, governed
 
 Rather than use the prediction intervals output from the UCMs, I set the upper and lower bounds as the projected UCM plus or minus the 80th percentile based on the standard deviation of the original time series. 
 
-For the CWRs, I projected the CWRs within a constrained forecast interval. CWRs are constrained to lie between ($a,b$). I limit CWRs such that each age/race/county combination are be constrained within the maximum/minimum of the time series such that $a=0.14$ for all projections and $b=max(CWR_{arc})$. I then transform the data using a scaled logit transformation to map ($a,b$) to the whole real line:
+For the CWRs, I projected the CWRs within a constrained forecast interval. CWRs are constrained to lie between ($a,b$). I limit CWRs such that each age/race/county combination are be constrained within the maximum/minimum of the time series such that $a=0.14$ (or a total fertility rate of approximately 1 [@hauer13; @schmertmann2017bayesian]) for all projections and $b=max(CWR_{arc})$. I then transform the data using a scaled logit transformation to map ($a,b$) to the whole real line:
   
 \begin{equation}
 y = log\big(\frac{x-a}{b-x}\big)
@@ -275,7 +275,7 @@ y = log\big(\frac{x-a}{b-x}\big)
 
 Where $x$ is the original data and $y$ is the transformed data. 
 
-The projected CCRs and CCDs are then input into Leslie matrices to create projected populations.
+The projected CCRs and CCDs are then input into Leslie matrices to create projected populations [@caswell2001matrix].
 
 Equation \ref{eq:ccrleslie} describes the leslie matrices for CCRs and equation \ref{eq:ccdleslie} describes the leslie matrices for CCDs.
 
@@ -342,7 +342,7 @@ The population aged 0-4 in time $t+1$ are projected by applying a 1.05 sex ratio
 
 ## DATA
 
-Data used to project the populations consist of a single primary data source: the National Vital Statistics System U.S. Census Populations with Bridged Race Categories data set. These data harmoize racial classifications across disparate time periods to allow population estimates to be sufficiently comparable across space and time. All county boundaries are generally rectified as well. The National Center for Health Statistics bridge the 31 race categories used in Census 2000 and 2010 with the four race categories used in the 1977 Office of Management and Budget standards.
+Data used to project the populations consist of a single primary data source: the National Vital Statistics System U.S. Census Populations with Bridged Race Categories data set^[Data can be downloaded here: https://seer.cancer.gov/popdata/download.html]. These data harmoize racial classifications across disparate time periods to allow population estimates to be sufficiently comparable across space and time. All county boundaries are generally rectified as well. The National Center for Health Statistics bridge the 31 race categories used in Census 2000 and 2010 with the four race categories used in the 1977 Office of Management and Budget standards.
 
 There are two primary bridged-race data sets. The first covers the time period 1969-2016 and utilizes three race groups: White, Black, and Other. The second covers the time period 1990-2016 and uses four race groups (White, Black, American Indian/Alaska Native, and Asian/Pacific Islander) as well as two origin groups (Hispanic and Non-Hispanic). Evaluation of the population projections makes use of the three race group dataset covering 1969-2016.
 
@@ -356,9 +356,9 @@ In the event a UCM contained NA or infinite values or produced covariance matric
 
 # EVALUATIONS
 
-To evaluate the projection accuracy, I use the base period 1980-2000 to project the population for eighteen age groups, two sexes, three races (White, Black, Other), and `r length(unique(paste0(z$STATE, z$COUNTY)))` counties for the projection period 2000-2015. I utilize an ex-post facto analysis at periods 2005, 2010, and 2015 using a pure CCD model (named ADD), a pure CCR model (named MULT), and blended model (named ADDMULT). The ADDMULT model utilizes CCDs if a county is projected to grow and CCRs if it is projected to decline.
+To evaluate the projection accuracy, I use the base period 1980-2000 to project the population for eighteen age groups, two sexes, three races (White, Black, Other), and `r length(unique(paste0(z$STATE, z$COUNTY)))` counties for the projection period 2000-2015. I utilize an ex-post facto analysis at periods 2005, 2010, and 2015 using a pure CCD model (named ADD), a pure CCR model (named MULT), and blended model (named ADDMULT). The ADDMULT model utilizes CCDs if a county is projected to grow and CCRs if it is projected to decline. Blended models have been shown to outperform both purely linear or purely exponential models in simple extrapolation approaches to population projections [@wilson2016evaluation].
 
-In keeping with demographic tradition [CITES], I evaluate the projections using three primary statistics. To determine the overall accuray of the projections, I use Absolute Percent Errors (APE), to determine the bias of the projections I use the Algebraic Percent Error (ALPE), and to determine the accuracy of the uncertainty interval I evaluate the percentage of actual counts within the 80th percentage projection interval. In some places I have subsituted a Symmetric  Absolute Percent Error (SAPE).
+In keeping with demographic tradition [@hauer13; @booth2006demographic], I evaluate the projections using three primary statistics. To determine the overall accuray of the projections, I use Absolute Percent Errors (APE), to determine the bias of the projections I use the Algebraic Percent Error (ALPE), and to determine the accuracy of the uncertainty interval I evaluate the percentage of actual counts within the 80th percentage projection interval. In some places I have subsituted a Symmetric  Absolute Percent Error (SAPE) [@shcherbakov2013survey].
 
 Equations \ref{eq:evals} describe the equations used to evaluate errors. $P_i$ refers to the projected value and $A_i$ refers to the actual, observed value.
 
@@ -449,9 +449,9 @@ kable(table, caption="**Evaluation of overall errors for each county.**")
 
 
 
-Figure \autoref{county map} shows the absolute percent errors associated with the total population for the ADDMULT model. Most states and counties see relatively low errors with the median APE of just 8.29% by 2015, however some isolated pockets of high errors do exist randomly distributed throughout the United States. Additionally, 94.8% of counties had observed population totals within the 80th percentile prediction interval with the ADDMULT model by 2015. This large number of counties could suggest that prediction bands at at the scale of population totals in counties could be too wide. 
+\autoref{county map} shows the absolute percent errors associated with the total population for the ADDMULT model in U.S. counties in 2015. Most states and counties see relatively low errors with the median APE of just 8.29% by 2015, however some isolated pockets of high errors do exist randomly distributed throughout the United States. Additionally, 94.8% of counties had observed population totals within the 80th percentile prediction interval with the ADDMULT model by 2015. This large number of counties could suggest that prediction bands at at the scale of population totals in counties could be too wide. 
 
-```{r COUNTY error map, echo=FALSE, , message=FALSE, warning=FALSE, cache=TRUE, paged.print=FALSE, fig.cap=paste("**Map of county errors of the total population in 2015 using the ADDMULT model.** Here I show the geographic distribution of absolute percent errors. Most states and counties have low error rates of the total population with isolated pockets of large errors. \\label{county map}"), results='asis'}
+```{r, echo=FALSE, , message=FALSE, warning=FALSE, cache=TRUE, paged.print=FALSE, fig.cap=paste("**Map of county errors of the total population in 2015 using the ADDMULT model.** Here I show the geographic distribution of absolute percent errors. Most states and counties have low error rates of the total population with isolated pockets of large errors. \\label{county map}"), results='asis'}
 eval_ucm_cntytotal <- z %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, GEOID, YEAR, TYPE) %>%
@@ -547,7 +547,7 @@ kable(table, caption="**Evaluation of Age Group Errors.**", digits = 4)
 
 
 
-Figure \ref{agestructures} shows projected age structures in nine counties across three county types -- college counties, suburban counties, and retirement counties. In all three county types the age structures are preserved in the projections. All three county types exhibit differing age structures with important considerations. For college counties, the college-age population (those aged 15-24) do not age in place within those communities. The large population peaks in those counties show great in-migration at the college ages and then great out-migration afterwards. In suburban counties, a "double hump" age structure is typically present with large numbers of both adolescents and middle-aged adults. Most twenty-somethings either cannot afford to live in affluent suburban areas, move away for school or work, or do not have the family reasons for living there. Retirement communities are often identified by the large numbers of populations over the age of 55. 
+\autoref{agestructures} shows projected age structures in nine samples counties across three county types -- college counties, suburban counties, and retirement counties. In all three county types the age structures are preserved in the projections. All three county types exhibit differing age structures with important considerations. For college counties, the college-age population (those aged 15-24) do not age in place within those communities. The large population peaks in those counties show great in-migration at the college ages and then great out-migration afterwards. In suburban counties, a "double hump" age structure is typically present with large numbers of both adolescents and middle-aged adults. Most twenty-somethings either cannot afford to live in affluent suburban areas, move away for school or work, or do not have the family reasons for living there. Retirement communities are often identified by the large numbers of populations over the age of 55. 
 
 ```{r, echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Age structures of various county types.** I compare the projected age structures to the observed age structures in nine counties across three county types using the ADD/MULT model. (a) demonstrates counties with major universities, (b) demonstrates sample suburban counties, and (c) demonstrates sample retirement counties. All three county types have age structures largely preserved despite widely different age structures.\\label{agestructures}")}
 collegecampuses<- z[which(z$GEOID %in% c("13059","36109", "42027")),]
@@ -613,10 +613,10 @@ plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
 
 ## Race Errors
 
-Figure \ref{raceerrors} reports the ALPE and the APE distribution by race group for all counties. The White race group tends to have the lowest errors associated with the proejctions, followed by Black, and then Other.
+\autoref{raceerrors} reports the ALPE and the APE distribution by race group for all counties. The White race group tends to have the lowest errors associated with the proejctions, followed by Black, and then Other.
 
 
-```{r race errors, echo=FALSE, results='asis', cache=TRUE, , message=FALSE, warning=FALSE, fig.cap=paste("**Race group errors. (a) shows the Algebraic Percent Errors for all three methods and (b) shows the APE distribution of errors.** \\label{raceerrors}")}
+```{r, echo=FALSE, results='asis', cache=TRUE, , message=FALSE, warning=FALSE, fig.cap=paste("**Race group errors. (a) shows the Algebraic Percent Errors for all three methods and (b) shows the APE distribution of errors.** \\label{raceerrors}")}
 eval_ucm_agetotal <- z %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, RACE, YEAR, TYPE) %>%
