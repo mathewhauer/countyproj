@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+/*_cache/
+/*_files/
+/*DATA/
+/*PROJECTIONS/
+/*EVAL/
+*.utf8.md
+*.knit.md
+*.tex
+*.log
+*.zip

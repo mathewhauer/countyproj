@@ -206,7 +206,7 @@ An alternative to cohort-component is the Hamilton-Perry method [@swanson2010for
 
 \begin{eqnarray}\label{eq:ccr}
 CCR_{t} & = & \frac {_nP_{x,t}} {_nP_{x-y,t-1}}\\
-{_nP_{x+t}} & = & CCR_{t} \,\,  \cdot \,\, {_{n}P_{x-y,t}}\nonumber
+{_nP_{x+t}} & = & CCR_{t} \,\,  \cdot \,\, {_{n}P_{x-y,t}}
 \end{eqnarray}
 
 Where $_nP_{x,t}$ is the population aged $x$ to $x+n$ in time $t$ and $_nP_{x-y,t}$ is the population aged $x$ to $x+n-y$ in time $t$ where $y$ refers to the time difference between time periods. These CCRs are calculated for each age group $a$, for each sex group $s$, for each race group $r$, in each time period $t$, in county $c$. Thus to find the population of ten to fourteen year olds ($_5P_{10}$) in five years ($t+1$), we multiply the ratio of the population aged 10-14 in time $t$ ($_5P_{10,t}$) to the population aged 5-9 five-years prior in time $t-1$ ($_5P_{10-5,t-1}$) to the population aged 0-4 in time $t$ ($_5P_{10-5,t}$). ie, if we have 100 5-9 year olds five years ago and we now have 125 10-14 year olds and 90 5-9 year olds, we can expect the number of 10-14 year olds in 5 years to be (125/100 $\cdot$ 90 = 112.5).
@@ -216,7 +216,7 @@ Two age groups must have special consideration: the population aged 0-4 ($_5P_0$
 
 To project 0-4 year olds, I use the child-woman ratio (CWR)
 
-\begin{eqnarray}\label{eq:ccr}
+\begin{eqnarray}\label{eq:cwr}
 CWR_{t} & = & \frac{_5P_{0,t}}{_{45}W_{15,t}}\\
 {_nP_{x+t}} & = & CWR_{t} \,\, \cdot \,\, {_{45}W_{15,t+1}}\nonumber
 \end{eqnarray}
