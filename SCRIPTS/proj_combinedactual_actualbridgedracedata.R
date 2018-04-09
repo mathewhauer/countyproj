@@ -94,8 +94,8 @@ GEOID = unlist(list(unique(fipslist$GEOID)))
 # SET THE GROUPING VARIABLES HERE
 GROUPING <- c("STATE", "COUNTY", "YEAR", "AGE", "RACE", "SEX")
 
-test_year = 2015
-launch_year = test_year
+test_year = 2010
+launch_year = 2015
 SIZE<-18
 # NUMBER OF PROJECTION STEPS
 STEPS<-17
@@ -276,7 +276,7 @@ project = function(x){
              ccr15 = X16 - lag(X15, 5),
              ccr16 = X17 - lag(X16, 5),
              ccr17 = X18 - (lag(X17, 5) + lag(X18, 5))) %>%
-      filter(YEAR >= min(YEAR +5, na.rm=T) & YEAR <= test_year)
+      filter(YEAR >= min(YEAR +5, na.rm=T) & YEAR <= test_year-5)
     #CCDs$COUNTYRACE <- paste0(CCDs$GEOID, "_TOTAL")
     
     ### Calculating the CCRs
@@ -323,7 +323,7 @@ project = function(x){
              ccr15 = X16 / lag(X15, 5),
              ccr16 = X17 / lag(X16, 5),
              ccr17 = X18 / (lag(X17, 5) + lag(X18, 5))) %>%
-      filter(YEAR >= min(YEAR +5, na.rm=T) & YEAR <= test_year)
+      filter(YEAR >= min(YEAR +5, na.rm=T) & YEAR <= test_year-5)
     #CCRs$COUNTYRACE <- paste0(CCRs$GEOID, "_TOTAL")
     CCRs[mapply(is.infinite, CCRs)] <- NA
     CCRs[mapply(is.nan, CCRs)] <- NA
@@ -606,7 +606,7 @@ KT2 <- KT %>%
 # z$TYPE = "BASE"
 # z<- rbind(z, KT2) %>%
 #   na.omit
-write.table(KT2, paste0("PROJECTIONS/BRIDGEDRACE/COUNTYnoslope_addmult",this.state,".csv"))
+write.table(KT2, paste0("PROJECTIONS/BRIDGEDRACE/002COUNTYnoslope_addmult",this.state,".csv"))
 }
 
 

@@ -547,9 +547,9 @@ kable(table, caption="**Evaluation of Age Group Errors.**", digits = 4)
 
 
 
-\autoref{agestructures} shows projected age structures in nine samples counties across three county types -- college counties, suburban counties, and retirement counties. In all three county types the age structures are preserved in the projections. All three county types exhibit differing age structures with important considerations. For college counties, the college-age population (those aged 15-24) do not age in place within those communities. The large population peaks in those counties show great in-migration at the college ages and then great out-migration afterwards. In suburban counties, a "double hump" age structure is typically present with large numbers of both adolescents and middle-aged adults. Most twenty-somethings either cannot afford to live in affluent suburban areas, move away for school or work, or do not have the family reasons for living there. Retirement communities are often identified by the large numbers of populations over the age of 55. 
+\autoref{ageexample} shows projected age structures in nine samples counties across three county types -- college counties, suburban counties, and retirement counties. In all three county types the age structures are preserved in the projections. All three county types exhibit differing age structures with important considerations. For college counties, the college-age population (those aged 15-24) do not age in place within those communities. The large population peaks in those counties show great in-migration at the college ages and then great out-migration afterwards. In suburban counties, a "double hump" age structure is typically present with large numbers of both adolescents and middle-aged adults. Most twenty-somethings either cannot afford to live in affluent suburban areas, move away for school or work, or do not have the family reasons for living there. Retirement communities are often identified by the large numbers of populations over the age of 55. 
 
-```{r, echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Age structures of various county types.** I compare the projected age structures to the observed age structures in nine counties across three county types using the ADD/MULT model. (a) demonstrates counties with major universities, (b) demonstrates sample suburban counties, and (c) demonstrates sample retirement counties. All three county types have age structures largely preserved despite widely different age structures.\\label{agestructures}")}
+```{r, echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Age structures of various county types.** I compare the projected age structures to the observed age structures in nine counties across three county types using the ADD/MULT model. (a) demonstrates counties with major universities, (b) demonstrates sample suburban counties, and (c) demonstrates sample retirement counties. All three county types have age structures largely preserved despite widely different age structures.\\label{ageexample}")}
 collegecampuses<- z[which(z$GEOID %in% c("13059","36109", "42027")),]
 collegecampuses <- collegecampuses %>%
   group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
@@ -610,6 +610,59 @@ plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
 
 
 ```
+
+
+\autoref{agestructures} shows the Algebraic Percent Errors by age group for all three evaluation periods. For every age below 60, the ADD and ADD/MULT models produce lower ALPEs, but for age groups over 60, the Mult model produces lower ALPEs. This could be reflective of mortality being the dominant population process for older age populations and is especially pronounced in the 85+ age group. Here, the 50th percentile ALPE for ADD and ADD/MULT is approximately 20% while the Mult model is just under 10%. Future projections could blend the two together and use CCRs for the open-ended age interval.
+
+```{r,echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Algebraic Percent Errors by age group.** I plost the 50th percentile Algebraic Percent Error (ALPE) by age group for 2005, 2010, and 2015.\\label{agestructures}")}
+eval_ucm_agetotal <- z %>%
+  filter(!TYPE == "BASE") %>%
+  group_by(STATE, COUNTY, AGE, YEAR, TYPE) %>%
+  dplyr::summarise(POPULATION = sum(POPULATION),
+                   A = sum(A),
+                   B = sum(B),
+                   C = sum(C),
+                   num = length(A)) %>%
+  mutate(FLAG1 = if_else(is.na((A/POPULATION)-1), 0,(A/POPULATION)-1),
+         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0),
+         in90percentile = FLAG2/num) %>%
+  ungroup() %>%
+  group_by(AGE, TYPE) %>%
+  dplyr::summarise(MAPE = quantile(abs(FLAG1), 0.5),
+                   MALPE = quantile(FLAG1, 0.5),
+                   in80percentile = sum(FLAG2)/length(FLAG2),
+                   n = length(FLAG2)) %>%
+  ungroup()%>%
+  mutate(AGE = case_when(
+    AGE == 1 ~ 0,
+    AGE == 2 ~ 5,
+    AGE == 3 ~ 10,
+    AGE == 4 ~ 15,
+    AGE == 5 ~ 20,
+    AGE == 6 ~ 25,
+    AGE == 7 ~ 30,
+    AGE == 8 ~ 35,
+    AGE == 9 ~ 40,
+    AGE == 10 ~ 45,
+    AGE == 11 ~ 50,
+    AGE == 12 ~ 55,
+    AGE == 13 ~ 60,
+    AGE == 14 ~ 65,
+    AGE == 15 ~ 70,
+    AGE == 16 ~ 75,
+    AGE == 17 ~ 80,
+    AGE == 18 ~ 85,
+  ))
+  #        MALPE = percent(MALPE),
+  #        in80percentile = percent(in80percentile))
+
+ggplot(data=eval_ucm_agetotal, aes(group = TYPE)) +
+  geom_line(aes(x=AGE, y =MALPE, linetype=TYPE, col=TYPE)) +
+  geom_hline(yintercept=0) +
+  theme_bw()
+```
+
+
 
 ## Race Errors
 
