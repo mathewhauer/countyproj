@@ -533,7 +533,7 @@ kable(table, caption="**Evaluation of Age Group Errors.**", digits = 3)
 
 ## Results: Age Structures: College Counties
 
-```{r college, echo= FALSE, message = FALSE, warning = FALSE, fig.align = "center"}
+```{r college, echo= FALSE, message = FALSE, fig.height=4, warning = FALSE, fig.align = "center"}
 collegecampuses<- z[which(z$GEOID %in% c("13059","36109", "42027")),]
 collegecampuses <- collegecampuses %>%
   group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
@@ -548,27 +548,218 @@ collegecampuses <- collegecampuses %>%
 figure_age(collegecampuses, "Counties with large college campuses")
 ```
 
+## Results: Age Structures: Suburban Counties
+```{r suburbs, echo= FALSE, message = FALSE, fig.height=4, warning = FALSE, fig.align = "center"}
+suburban<- z[which(z$GEOID %in% c("18057","47187", "13117")),]
+suburban <- suburban %>%
+  group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
+  dplyr::summarise(A = sum(A),
+                   POPULATION=sum(POPULATION)) %>%
+  ungroup()%>%
+  mutate(CNTYNAME = paste0(NAME, ", ",state),
+         AGE = AGE*5-5) %>%
+  filter(YEAR %in% c(2005,2015)) %>%
+  mutate(YEAR = as.factor(YEAR))
 
-## S
-This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
-
-## Slide with Bullets
-
-- Bullet 1
-- Bullet 2
-- Bullet 3
-
-## Slide with R Output
-
-```{r cars, echo = TRUE}
-summary(cars)
+figure_age(suburban, "Suburban counties")
 ```
 
-## Slide with Plot
+## Results: Age Structures: Retirement Counties
+```{r retirees, echo= FALSE, message = FALSE, fig.height=4, warning = FALSE, fig.align = "center"}
+retirement<- z[which(z$GEOID %in% c("26089","05005", "37175")),]
+retirement <- retirement %>%
+  group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
+  dplyr::summarise(A = sum(A),
+                   POPULATION=sum(POPULATION)) %>%
+  ungroup()%>%
+  mutate(CNTYNAME = paste0(NAME, ", ",state),
+         AGE = AGE*5-5) %>%
+  filter(YEAR %in% c(2005,2015)) %>%
+  mutate(YEAR = as.factor(YEAR))
 
-```{r pressure}
-plot(pressure)
+figure_age(retirement, "Retirement counties")
 ```
+
+## Results: Age Structures
+```{r ages, echo= FALSE, message = FALSE,  warning = FALSE, fig.align = "center", fig.height = 5, fig.cap="Algebraic Percent Errors"}
+eval_ucm_agetotal <- z %>%
+  filter(!TYPE == "BASE") %>%
+  group_by(STATE, COUNTY, AGE, YEAR, TYPE) %>%
+  dplyr::summarise(POPULATION = sum(POPULATION),
+                   A = sum(A),
+                   B = sum(B),
+                   C = sum(C),
+                   num = length(A)) %>%
+  mutate(FLAG1 = if_else(is.na((A/POPULATION)-1), 0,(A/POPULATION)-1),
+         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0),
+         in90percentile = FLAG2/num) %>%
+  ungroup() %>%
+  group_by(AGE, TYPE) %>%
+  dplyr::summarise(MAPE = quantile(abs(FLAG1), 0.5),
+                   MALPE = quantile(FLAG1, 0.5),
+                   in80percentile = sum(FLAG2)/length(FLAG2),
+                   n = length(FLAG2)) %>%
+  ungroup()%>%
+  mutate(AGE = case_when(
+    AGE == 1 ~ 0,
+    AGE == 2 ~ 5,
+    AGE == 3 ~ 10,
+    AGE == 4 ~ 15,
+    AGE == 5 ~ 20,
+    AGE == 6 ~ 25,
+    AGE == 7 ~ 30,
+    AGE == 8 ~ 35,
+    AGE == 9 ~ 40,
+    AGE == 10 ~ 45,
+    AGE == 11 ~ 50,
+    AGE == 12 ~ 55,
+    AGE == 13 ~ 60,
+    AGE == 14 ~ 65,
+    AGE == 15 ~ 70,
+    AGE == 16 ~ 75,
+    AGE == 17 ~ 80,
+    AGE == 18 ~ 85,
+  ))
+  #        MALPE = percent(MALPE),
+  #        in80percentile = percent(in80percentile))
+
+ggplot(data=eval_ucm_agetotal, aes(group = TYPE)) +
+  geom_line(aes(x=AGE, y =MALPE, linetype=TYPE, col=TYPE)) +
+  geom_hline(yintercept=0) +
+  theme_bw()
+```
+
+## Results: Race
+```{r race, echo= FALSE, message = FALSE,  warning = FALSE, fig.align = "center"}
+eval_ucm_agetotal <- z %>%
+  filter(!TYPE == "BASE") %>%
+  group_by(STATE, COUNTY, RACE, YEAR, TYPE) %>%
+  dplyr::summarise(POPULATION = sum(POPULATION),
+                   A = sum(A),
+                   B = sum(B),
+                   C = sum(C),
+                   num = length(A)) %>%
+  mutate(FLAG1 = if_else(is.na((A/POPULATION)-1), 0,(A/POPULATION)-1),
+         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0),
+         in90percentile = FLAG2/num) %>%
+  ungroup()
+figure_race = function(x){
+  a<-ggplot() +
+    geom_density(data=x[which(x$YEAR == 2015),], aes(x=FLAG1, colour = RACE, fill = RACE), adjust=1.5, lwd=1, alpha=.20) +
+    scale_color_manual(name="Race",labels = c("White", "Black", "Other"), values = c("red", "Green", "Blue")) +
+    geom_vline(xintercept=0) +
+    theme_bw() +
+    guides(fill=FALSE) +
+    #scale_color_manual(name="TEST",labels = c("White", "Black", "Other"), values = c("red", "blue", "Green")) +
+    xlim(-0.5,0.5) + 
+    labs(x='Algebraic Percent(error)',
+         y='Density') +
+    facet_grid(. ~ TYPE, scales = "fixed")
+  return(a)
+}
+figure_race2 = function(x){
+  a<-ggplot() +
+    geom_density(data=x[which(x$YEAR == 2015),], aes(x=abs(FLAG1), colour = RACE, fill = RACE), adjust=1.5, lwd=1, alpha=.20) +
+    scale_color_manual(name="Race",labels = c("White", "Black", "Other"), values = c("red", "Green", "Blue")) +
+    geom_vline(xintercept=0) +
+    theme_bw() +
+    guides(fill=FALSE) +
+    #scale_color_manual(name="TEST",labels = c("White", "Black", "Other"), values = c("red", "blue", "Green")) +
+    xlim(0,0.5) + 
+    labs(x='Absolute Percent(error)',
+         y='Density') +
+    facet_grid(. ~ TYPE, scales = "fixed")
+  return(a)
+}
+panel1 <- figure_race(eval_ucm_agetotal)
+panel2 <- figure_race2(eval_ucm_agetotal)
+
+prow <- plot_grid(panel1 + theme(legend.position="none"),
+                  panel2 + theme(legend.position="none"),
+                  labels ="auto", ncol = 1
+)
+legend <- get_legend(panel1)
+plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
+```
+
+
+## Results: Complete Joint Errors
+```{r joint, echo= FALSE, message = FALSE,  warning = FALSE, fig.align = "center"}
+eval_ucm_cntytotal <- z %>%
+  # filter(!TYPE == "BASE") %>%
+  #group_by(STATE, COUNTY,SEX, RACE, AGE, YEAR, TYPE) %>%
+   # dplyr::summarise(POPULATION = sum(POPULATION, na.rm=T),
+   #                  A = sum(A, na.rm=T),
+   #                  B = sum(B, na.rm=T),
+   #                  C = sum(C, na.rm=T),
+   #                  num = length(A)) %>%
+  mutate(A= round(A, 6),
+         #FLAG1 = abs(A-POPULATION)/abs(A+POPULATION),
+    FLAG1 = if_else(is.na(abs((A-POPULATION))/(A+POPULATION)), 0,abs((A-POPULATION))/(A+POPULATION)),
+         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0)) %>%
+  #ungroup() %>%
+  #na.omit %>%
+  group_by(YEAR, TYPE) %>%
+  dplyr::summarise(SMAPE = quantile(abs(FLAG1), 0.5),
+                   #MALPE = quantile(FLAG1, 0.5),
+                   in80percentile = sum(FLAG2)/length(FLAG2),
+                   num = length(FLAG2)) %>%
+  # COUNTYnum = length(FLAG2)) %>%
+  mutate(SMAPE= percent(SMAPE),
+         #MALPE = percent(MALPE),
+         in80percentile = percent(in80percentile))
+
+mapeeval<- eval_ucm_cntytotal %>%
+  select(YEAR, TYPE, SMAPE, num) %>%
+  spread(YEAR, SMAPE) %>%
+  mutate(EVAL = "Median SAPE")
+
+
+eval80<- eval_ucm_cntytotal %>%
+  select(YEAR, TYPE, in80percentile, num) %>%
+  spread(YEAR, in80percentile) %>%
+  mutate(EVAL = "In 80th percentile")
+
+table <- rbind(mapeeval) %>%
+  #rbind(., eval80) %>%
+  select(TYPE, num, EVAL, "2005", "2010", "2015")
+
+kable(table, caption="**Evaluation of Age/Sex/Race/County joint Errors.**", digits = 4)
+```
+
+\begin{eqnarray}\label{eq:evals}
+SAPE & = & \frac{|(P_i - A_i)|} {(P_i + A_i)}
+\end{eqnarray}
+
+## Projections
+
+![USA](./presentation_files\figure-beamer\USA_proj.pdf)
+
+## Projections
+
+![Georgia](./presentation_files\figure-beamer\GA_proj.pdf)
+
+## Projections
+
+![Michigan](./presentation_files\figure-beamer\MI_proj.pdf)
+
+## Projections
+
+![Hillsborough NH](./presentation_files\figure-beamer\NH.pdf)
+
+## Conclusions
+
+- CCDs are easy to implement, code is open-source, errors are lower, exponential growth becomes linear, etc.
+
+- Most age-structures look good, tendency to over-project the open-ended age interval.
+
+- "Problem" counties are limited in scope.
+
+
+## Thank you!
+
+**Mathew E. Hauer**
+Applied Demographer
+Carl Vinson Institute of Government
+University of Georgia
 
