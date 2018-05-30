@@ -42,141 +42,34 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(data.table)
 library(knitr)
-library(scales)
-library(cowplot)
-library(tmap)
-library(tmaptools)
-library(tigris)
-library(censusapi)
-library(sp)
-library(grid)
-library(tidycensus)
-library(kableExtra)
-# key <- census_api_key("0206e3f2924a424be8722887fd0a49cea6308a7e", install=TRUE)
-# key <- "0206e3f2924a424be8722887fd0a49cea6308a7e"
+read_chunk('SCRIPTS/000-Libraries.R')
+read_chunk('SCRIPTS/001-basedataload.R')
+read_chunk('SCRIPTS/001-fipscodes.R')
+read_chunk('SCRIPTS/001-readevalproj.R')
+# read_chunk('SCRIPTS/004-Figure1.R')
+# read_chunk('SCRIPTS/005-NonhumanDataLoad.R')
+# read_chunk('SCRIPTS/006-Figure2.R')
+# read_chunk('SCRIPTS/007-figure3a_xTFRAfrica.R')
+# read_chunk('SCRIPTS/007-figure3b_historicbTFR.R')
+# read_chunk('SCRIPTS/007-figure3c_incomexTFR.R')
+# read_chunk('SCRIPTS/007-figure3_combined.R')
+# read_chunk('SCRIPTS/008-suppfig1_uscountyxTFR.R')
+# read_chunk('SCRIPTS/009-suppfig2.R')
+# read_chunk('SCRIPTS/010-suppfig3.R')
 ```
 
-```{r load, include=FALSE, cache=TRUE}
-knitr::opts_chunk$set(echo = TRUE)
-
-GROUPING <- c("STATE", "COUNTY", "YEAR", "AGE", "RACE", "SEX")
-
-test_year = 2000
-launch_year = test_year
-SIZE<-18
-# NUMBER OF PROJECTION STEPS
-STEPS<-3
-FORLEN<-(STEPS*5)
-BASEANDSTEPS<-STEPS+1
-years <- 0
-years$YEAR <- seq(launch_year+5,launch_year+(STEPS*5), 5)
-years$YEAR <- seq(launch_year+1,launch_year+STEPS,1)
-
-
-K05_pop<- read.table("DATA/us.1969_2016.19ages.adjusted.txt") 
-K05_pop$V1 <- as.character(K05_pop$V1)
-K05_pop$YEAR <- as.numeric(substr(K05_pop$V1,1,4))
-K05_pop$STATEID <- substr(K05_pop$V1, 5,6)
-K05_pop$STATE <- substr(K05_pop$V1, 7,8)
-K05_pop$COUNTY <- substr(K05_pop$V1,9,11)
-K05_pop$REGISTRY <- substr(K05_pop$V1, 12,12)
-K05_pop$RACE <- substr(K05_pop$V1, 14,14)
-K05_pop$ORIGIN <- substr(K05_pop$V1, 15,15)
-K05_pop$SEX <- substr(K05_pop$V1, 16,16)
-K05_pop$AGE <- as.numeric(if_else(substr(K05_pop$V1, 17, 18) == "00","01",substr(K05_pop$V1, 17, 18)))
-K05_pop$POPULATION <- as.numeric(substr(K05_pop$V1, 19, 30))
-K05_pop <- K05_pop %>%
-  group_by(.dots = GROUPING) %>%
-  summarise(POPULATION = sum(POPULATION))
-K05_pop$GEOID <- paste0(K05_pop$STATE, K05_pop$COUNTY)
-K05_pop$COUNTYRACE <- paste0(K05_pop$GEOID, "_", K05_pop$RACE)
-
-K05_launch <- K05_pop[which(K05_pop$YEAR == launch_year),] %>%
-  group_by(STATE, COUNTY, GEOID, YEAR) %>%
-  dplyr::summarise(POPULATION = sum(POPULATION)) %>%
-  ungroup()
-
-K05_launch2 <- K05_pop[which(K05_pop$YEAR %in% c(launch_year, launch_year+5, launch_year+10, launch_year+15)),]
-K05_launch2$COUNTYRACE <- paste0(K05_launch2$GEOID, "_", K05_launch2$RACE)
-K05_launch2$Var1 = paste0("a", K05_launch2$AGE)
-
-counties <- counties(cb = TRUE)
-counties <- spTransform(counties, CRS("+init=epsg:2163")) %>%
-  subset(!(STATEFP %in% c("60", "64","66", "68", "69", "70", "74","72", "78")))
-states <- states(cb=TRUE)
-
+```{r libraries, include=FALSE}
 ```
 
-```{r more load, include=FALSE, cache=TRUE}
-fipslist <- read_csv(file="https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", col_names = FALSE) %>%
-  mutate(GEOID = paste0(X2, X3)) %>%
-  dplyr::rename(state = X1,
-                STATEID = X2,
-                CNTYID = X3,
-                NAME = X4) %>%
-  filter(!STATEID %in% c("60", "66", "69", "72", "74", "78"))
-
-# Converting the fipslist into a unique list of 2-digit state ID's #
-stateid = unlist(list(unique(fipslist$STATEID)))
-# Converting the fipslist into a unique list of 5-digit county ID's #
-GEOID = unlist(list(unique(fipslist$GEOID)))
-
-statenames <- group_by(fipslist, STATEID, state) %>%
-  dplyr::summarise()
-countynames <- group_by(fipslist, GEOID, NAME, state) %>%
-  summarise()
+```{r evalbasedata, include=FALSE}
 ```
 
-```{r more more load, include=FALSE, cache=TRUE}
-files <- paste0("EVAL/BRIDGEDRACE/", list.files(path = "./EVAL/BRIDGEDRACE/",pattern = ".csv"))
-temp <- lapply(files, fread, sep=" ")
-z <- rbindlist( temp ) %>%
-  dplyr::rename(YEAR = V3,
-                SEX = V4,
-                COUNTYRACE = V5,
-                TYPE = V6,
-                AGE = V7,
-                A = V8,
-                B = V9,
-                C = V10,
-                Var1 = V2) %>%
-  mutate(STATE= substr(COUNTYRACE, 1,2),
-         COUNTY = substr(COUNTYRACE, 3,5),
-         GEOID = paste0(STATE, COUNTY),
-         A = if_else(A<0, 0, A),
-         B = if_else(B<0, 0, B),
-         C = if_else(C<0,0, C),
-         RACE = substr(COUNTYRACE, 7,7))
-z[is.na(z)] <-0
-basesum <-  K05_launch[which( K05_launch$YEAR == launch_year),] %>%
-  select(STATE, COUNTY, GEOID, POPULATION)
-
-addsum <- z[which(z$TYPE=="ADD" & z$YEAR == (launch_year+FORLEN)),] %>%
-  group_by(STATE, COUNTY, GEOID, TYPE) %>%
-  dplyr::summarise(A = sum(A))
-
-addmult <- left_join(addsum, basesum) %>%
-  mutate(COMBINED = if_else(A>= POPULATION, "ADD" ,"Mult")) %>%
-  select(STATE, COUNTY, GEOID, COMBINED)
+```{r fipscodes, include=FALSE}
+```
 
 
-
-combined<- left_join(z, addmult) %>%
-  filter(TYPE == COMBINED) %>%
-  mutate(TYPE = "ADDMULT") %>%
-  select(-COMBINED)
-
-z<- rbind(z, combined) %>%
-  select(-V1)
-z<-  left_join(as.data.frame(z), as.data.frame(K05_launch2))
-z<- left_join(z, countynames)
-z[is.na(z)] <-0
-z<- filter(z,
-           !GEOID %in% c("02900", "04910", "15900", "35910", "36910", "51910", "51911","51911", "51913", "51914", "51915", "51916", "51918"))
-
+```{r readevalproj, include=FALSE}
 ```
 
 
@@ -379,7 +272,7 @@ library(kableExtra)
 eval_ucm_statetotal <- z %>%
   #mutate(RACE = substr(countyrace, 7,25))
   group_by(TYPE, YEAR) %>%
-  summarise(POPULATION = sum(POPULATION),
+  dplyr::summarise(POPULATION = sum(POPULATION),
             A = sum(A),
             B = sum(B),
             C = sum(C),
@@ -614,7 +507,7 @@ plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
 
 \autoref{agestructures} shows the Algebraic Percent Errors by age group for all three evaluation periods. For every age below 60, the ADD and ADD/MULT models produce lower ALPEs, but for age groups over 60, the Mult model produces lower ALPEs. This could be reflective of mortality being the dominant population process for older age populations and is especially pronounced in the 85+ age group. Here, the 50th percentile ALPE for ADD and ADD/MULT is approximately 20% while the Mult model is just under 10%. Future projections could blend the two together and use CCRs for the open-ended age interval.
 
-```{r,echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Algebraic Percent Errors by age group.** I plost the 50th percentile Algebraic Percent Error (ALPE) by age group for 2005, 2010, and 2015.\\label{agestructures}")}
+```{r,echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Algebraic Percent Errors by age group.** I plot the 50th percentile Algebraic Percent Error (ALPE) by age group for 2005, 2010, and 2015.\\label{agestructures}")}
 eval_ucm_agetotal <- z %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, AGE, YEAR, TYPE) %>%
@@ -651,7 +544,7 @@ eval_ucm_agetotal <- z %>%
     AGE == 15 ~ 70,
     AGE == 16 ~ 75,
     AGE == 17 ~ 80,
-    AGE == 18 ~ 85,
+    AGE == 18 ~ 85
   ))
   #        MALPE = percent(MALPE),
   #        in80percentile = percent(in80percentile))
