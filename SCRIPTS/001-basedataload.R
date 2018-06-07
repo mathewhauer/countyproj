@@ -1,5 +1,5 @@
 ###------DATA LOAD-----
-## @knitr evalbasedata
+## @knitr basedataload
 
 GROUPING <- c("STATE", "COUNTY", "YEAR", "AGE", "RACE", "SEX")
 

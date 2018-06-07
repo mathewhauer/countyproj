@@ -7,13 +7,15 @@ output:
     fig_caption: true
     latex_engine: pdflatex
     template: LATEX/svm-latex-ms.tex
-title: "U.S. County level probabilistic population projections by age, sex, and race for the period 2015-2065"
+title: "U.S. County level probabilistic population projections by age, sex, and race for the period 2012-2100 consisent with the Shared Socioeconomic Pathways"
 thanks: "The data and code that supports this analysis are available in the supplementary materials."
 author:
 - name: Mathew E. Hauer ^1^*
-  affiliation: University of Georgia
+  affiliation: Florida State University
 
-abstract: "I provide county-level population projections by age, sex, and race in five-year intervals for the period 2015-2065 for 3,136 counties. Using historic U.S. census data in temporally rectified county boundaries and race groups for the period 1990-2015, I calculate cohort-change ratios (CCRs) and cohort-change differences (CCDs) for eighteen five-year age groups (0-85+), two sex groups (Male and Female), and four race groups (White NH, Black NH, Other NH, Hispanic) in over 3,000 U.S counties. I then project these CCRs/CCDs using Unobserved Components Models as inputs into leslie matrix population projection models for a blended CCD/CCR population projection. My ex-post facto evaluations using three race groups (White, Black, Other) on the 1969-2000 base period evaluated at 2005, 2010, and 2015 demonstrate confidence in the accuracy of the projections. These data have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
+abstract: "Small area and subnational population projections are important for understanding long-term demographic changes and typically take the form of a cohort-component model. Cohort-component relies on oftentimes difficult or even impossible to obtain subnational components of change due to data suppression for privacy reasons, small-cell sizes, or are simply unavailable. Cohort-Change Ratios (CCRs) are one approach that overcomes these data limitations but tend to produce unrealistic projected populations due to exponential compounding. I present a simple, parsimonious projection technique based on a variation of CCRs I call cohort-change differences (CCDs). Using ex-post facto analysis for the period 2000-2015 for 3,136 U.S. counties in temporally rectified county boundaries, eighteen five-year age groups (0-85+), two sex groups (Male and Female), and three race-groups (White, Black, Other) using CCDs in a bayesian structural time series for the period 1969-2000, I show that CCDs produce reduced errors compared to CCRs. I then provide county-level population projections by age, sex, and race in five-year intervals for the period 2020-2100, using bayesian structural time series, consistent with the Shared Socioeconomic Pathways. These data and methods have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
+
+# I provide county-level population projections by age, sex, and race in five-year intervals for the period 2015-2065 for 3,136 counties. Using historic U.S. census data in temporally rectified county boundaries and race groups for the period 1990-2015, I calculate cohort-change ratios (CCRs) and cohort-change differences (CCDs) for eighteen five-year age groups (0-85+), two sex groups (Male and Female), and four race groups (White NH, Black NH, Other NH, Hispanic) in over 3,000 U.S counties. I then project these CCRs/CCDs using Unobserved Components Models as inputs into leslie matrix population projection models for a blended CCD/CCR population projection. My ex-post facto evaluations using three race groups (White, Black, Other) on the 1969-2000 base period evaluated at 2005, 2010, and 2015 demonstrate confidence in the accuracy of the projections. These data have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
 keywords: "Population projections; subnational; demographic change; cohort-change ratios"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 geometry: margin=1in
@@ -34,7 +36,7 @@ header-includes:
 ---
 \* Corresponding author. hauer\@uga.edu. p: 706-542-9369.
 
-^1^ Carl Vinson Institute of Government, University of Georgia. 201 N. Milledge Ave. Athens, GA USA 30602.
+^1^ Department of Sociology, Florida State University.
 
 
 
@@ -46,9 +48,10 @@ library(knitr)
 read_chunk('SCRIPTS/000-Libraries.R')
 read_chunk('SCRIPTS/001-basedataload.R')
 read_chunk('SCRIPTS/001-fipscodes.R')
+read_chunk('SCRIPTS/001-readevalproj_fitted.R')
 read_chunk('SCRIPTS/001-readevalproj.R')
-# read_chunk('SCRIPTS/004-Figure1.R')
-# read_chunk('SCRIPTS/005-NonhumanDataLoad.R')
+read_chunk('SCRIPTS/001-lexisplotexample.R')
+read_chunk('SCRIPTS/002-projections.R')
 # read_chunk('SCRIPTS/006-Figure2.R')
 # read_chunk('SCRIPTS/007-figure3a_xTFRAfrica.R')
 # read_chunk('SCRIPTS/007-figure3b_historicbTFR.R')
@@ -62,26 +65,49 @@ read_chunk('SCRIPTS/001-readevalproj.R')
 ```{r libraries, include=FALSE}
 ```
 
-```{r evalbasedata, include=FALSE}
+```{r basedataload, include=FALSE, cache=TRUE}
 ```
 
-```{r fipscodes, include=FALSE}
+```{r fipscodes, include=FALSE, cache=TRUE}
 ```
 
 
-```{r readevalproj, include=FALSE}
+```{r readevalproj, include=FALSE, cache=TRUE}
 ```
 
+```{r readevalproj_fitted, include=FALSE, cache=TRUE}
+```
+
+```{r projections, include=FALSE, cache=TRUE}
+```
 
 # BACKGROUND & SUMMARY
 
-Population projections have a long history in the social and physical sciences as a means of examining demographic change, planning for the future, and to inform decision making in a variety of applications [@smith2006state; @passel2008us; @hebert2003alzheimer; @hales2002potential; @hauer2016millions; @gerland2014; @colby2017projections]. 
+Population projections have a long history in the social and physical sciences as a means of examining demographic change, planning for the future, and to inform decision making in a variety of applications [@smith2006state; @passel2008us; @hebert2003alzheimer; @hales2002potential; @hauer2016millions; @gerland2014; @colby2017projections]. Small-area population projections tend to be less robust than projections produced for larger geographies [@swanson2010forecasting; @smith2006state; @alexander2017flexible] yet there is an increasing demand for small-area demographic analysis [@alexander2017flexible; @chi2009can; @smith2013practitioner; @raymer2012does; @tatem2012mapping].
 
-Producing high-quality, highly-detailed population projections is a challenging endeavor and no rigourous set of U.S. sub-national projections by age, sex, and race currently exists. With such a large need for sub-national projections and to better understand the changing demographics of the U.S. population, I sought to produce such a set of high-quality, highly-detailed projections and make both the R code and subsequent projections available for dissemination with a wide audience. Here, I present age-sex-race specific population projections for all U.S. counties and their uncertainty, an ex-post facto evaluation of the projection methodology, and details on the calculations of these projections. I generate these projections using a historic time series of population estimates for the period 1990-2016 [@wonder2016bridged] in temporally rectified county boundaries and race groupings using leslie matrices populated by cohort-change ratios (CCRs) [@baker2017cohort] and cohort-change differences (CCDs) projected through the use of Unobserved Component Models (UCMs) [@harvey1990forecasting] in a combined additive/multiplicative model.
+Cohort-component, the typical demographic projection methodology employed across all scales, requires data on each component process disaggregated by the dimensionality of the population to be projected and oftentimes elements of these data are difficult to obtain at subnational geographies. For example, in the united States, there is no comprehensive data set of gross migration estimates by age, sex, and race for all U.S. counties, precluding the use of a gross-migration model of a cohort-component. Additionally, the National Center of Health Statistics (NCHS) suppress birth data in counties with fewer than 100k persons and data data are only available for cells with more than 10 deaths [@tiwari2014impact]. Even when these data are available, at the county-level, vital event data are not released as the sub-county level making cohort-component extremely difficult, if not impossible, to implement. 
 
-To ensure quality projections, I employ the use of ex-post-facto evaluations of the projection accuracy for three variant models: purely additive with CCDs, purely multiplicative with CCRs, and a blended model with CCDs in areas projected to grow and CCRs in areas projected to decline. I report the accuracy, bias, and uncertainties associated with these variants using absolute percent error, algebraic percent error, and the number of observations where the observed population is within the 80th percentile projection interval. Overall, the errors reported here are on par with or better than deterministic cohort-component population projection models undertaken at the sub-national leveland with Bayesian population projection models undertaken at various national and sub-national scales [@smith2003evaluation; @wilson2016evaluation; @smith1997further; @rayer2008population; @wilson2005recent; @booth2006demographic; @wilson2012forecast;@raftery2012bayesian; @boyle2010projection; @daponte1997bayesian; @lutz1996probabilistic].
+The Hamilton-Perry method [@hamilton1962short; @swanson2010forecasting] is a simple, parsimonious technique for producing population projections directly from multiple age-sex distributions through the use of cohort-change ratios (CCRs) [@baker2017cohort]. The minimal data requirements to produce CCRs, the ability to implement the same method across scale, the ability to implement CCRs in Leslie matrices [@sprague2012automatic], and the general ease of implementation make CCRs attractive in the production of small-area demographic projections. However, CCRs suffer from two major disadvantages over the use of cohort-component: 1) short-term rapid population growth can create impossibly explosive growth in long-range projections. Consider McKenzie county North Dakota. In 2010 McKenzie had a population of 6,360 that had ballooned to 12,792 by 2015, with a CCR for the 20-24 year old population of 2.46 (416 to 1,027). Implementing a 50-year population projection using that CCR would create a projected population that is approximately 8,000 times larger (2.46$^{10}$) – clearly an improbable number given the small, rural nature of its population -- yielding a theoretical 20-24 year old population of approximately 8 million. 2) Small cell sizes can create impossibly large CCRs with very small numeric change. A population changing from 2 to 6 persons has a net-change of just 4 persons but a CCR of 3.0.
 
-These projections, like all projections, involve the use of assumptions about future events that may or may not occur. Users of these projections should be aware that although the projections have been prepared with the use of standard methodologies, documentation of their creation, open-source computer code, and extensive evaluations of their accuracy and uncertainty, they may not accurately project the future population of a state, county, age, sex, or race group. The projections are based on historical trends and current estimates. These projections should be used only with full awareness of the inherent limitations of population projections in general and with knowledge of the procedures and assumptions described in this document. 
+In this paper I demonstrate an alternative to CCRs, which I call cohort-change differences (CCDs), that create linear rather than exponential growth. This technique has all of the advantages of CCRs by remaining just as simple and parsimonious with minimal data requirements, ease of implementation, leveraging the relationship between CCRs/CCDs and the fundamental demographic equation, while producing projected populations without impossibly explosive growth. I begin by outlining the methodology and describe how such a method can be easily implemented within a stochastic framework. To evaluate the technique, I use ex-post facto evaluations of a population projection by age/sex/race in five-year intervals for the period 2000-2015 for 3,136 temporally rectified county-boundaries, with eighteen five-year age groups (0-85+), two sex groups (Male and Female), and three race groups (White, Black, and Other). Overall, the errors reported here are on par with or better than deterministic cohort-component population projection models undertaken at the sub-national level and with Bayesian population projection models undertaken at various national and sub-national scales [@smith2003evaluation; @wilson2016evaluation; @smith1997further; @rayer2008population; @wilson2005recent; @booth2006demographic; @wilson2012forecast;@raftery2012bayesian; @boyle2010projection; @daponte1997bayesian; @lutz1996probabilistic].
+
+Producing high-quality, highly-detailed population projections is a challenging endeavor and no rigorous set of U.S. sub-national projections by age, sex, and race currently exists. With such a large need for sub-national projections and to better understand the changing demographics of the U.S. population, I produce such a set of high-quality, highly-detailed projections and make both the *R* code and subsequent projections available for dissemination to a wide audience. Here, I present age-sex-race specific population projections for all U.S. counties controlled to the Shared Socioeconomic Pathways [@o2014new]. I generate these projections using a historic time series of population estimates for the period 1990-2016 [@wonder2016bridged] in temporally rectified county boundaries and race groupings using Leslie matrices populated by CCRs and CCDs [@baker2017cohort], projected through the use of a Bayesian structural time series model [@harvey1990forecasting]. 
+
+These projections, like all projections, involve the use of assumptions about future events that may or may not occur. Users of these projections should be aware that although the projections have been prepared with the use of standard methodologies, documentation of their creation, open-source computer code, and extensive evaluations of their accuracy and uncertainty, they may not accurately project the future population of a state, county, age, sex, or race group. The projections are based on historical trends and current estimates. These projections should be used only with full awareness of the inherent limitations of population projections in general and with knowledge of the procedures and assumptions described in this document.
+
+<!-- I test my approach using an ex-post facto evaluation for U.S. county age/sex/race projections for the period 2000-2015 -->
+
+<!-- I provide county-level population projections by age, sex, and race in five-year intervals for the period 2000-2015 for 3,136 counties. Using historic U.S. census data in temporally rectified county boundaries and race groups for the period 1969-2000, I calculate CCRs and cohort-change differences CCDs for eighteen five-year age groups (0-85+), two sex groups (Male and Female), and four race groups (White NH, Black NH, Other NH, Hispanic) in over 3,000 U.S counties. -->
+
+<!-- Birth and death data are typically obtained through the National Center of Health Statistics (NCHS) vital events registration databases [@martin2018births]. Birth data, however, are only available for counties with populations greater than 100k and Death data are only available for cells with more than 10 deaths [@tiwari2014impact]. These limitations surrounding fertility, mortality, and migration render a universal county-level population projection difficult, if not impossible, to complete using publicly available datasets. -->
+
+<!-- and cohort-component, the typical demographic projection methodology employed across all scales, relies on data that are typically unavailable in many subnational geographies. With an , it is  -->
+
+<!-- Producing high-quality, highly-detailed population projections is a challenging endeavor and no rigourous set of U.S. sub-national projections by age, sex, and race currently exists. With such a large need for sub-national projections and to better understand the changing demographics of the U.S. population, I sought to produce such a set of high-quality, highly-detailed projections and make both the R code and subsequent projections available for dissemination with a wide audience. Here, I present age-sex-race specific population projections for all U.S. counties and their uncertainty, an ex-post facto evaluation of the projection methodology, and details on the calculations of these projections. I generate these projections using a historic time series of population estimates for the period 1990-2016 [@wonder2016bridged] in temporally rectified county boundaries and race groupings using leslie matrices populated by cohort-change ratios (CCRs) [@baker2017cohort] and cohort-change differences (CCDs) projected through the use of Unobserved Component Models (UCMs) [@harvey1990forecasting] in a combined additive/multiplicative model. -->
+
+<!-- To ensure quality projections, I employ the use of ex-post-facto evaluations of the projection accuracy for three variant models: purely additive with CCDs, purely multiplicative with CCRs, and a blended model with CCDs in areas projected to grow and CCRs in areas projected to decline. I report the accuracy, bias, and uncertainties associated with these variants using absolute percent error, algebraic percent error, and the number of observations where the observed population is within the 80th percentile projection interval. Overall, the errors reported here are on par with or better than deterministic cohort-component population projection models undertaken at the sub-national leveland with Bayesian population projection models undertaken at various national and sub-national scales [@smith2003evaluation; @wilson2016evaluation; @smith1997further; @rayer2008population; @wilson2005recent; @booth2006demographic; @wilson2012forecast;@raftery2012bayesian; @boyle2010projection; @daponte1997bayesian; @lutz1996probabilistic]. -->
+
+<!-- These projections, like all projections, involve the use of assumptions about future events that may or may not occur. Users of these projections should be aware that although the projections have been prepared with the use of standard methodologies, documentation of their creation, open-source computer code, and extensive evaluations of their accuracy and uncertainty, they may not accurately project the future population of a state, county, age, sex, or race group. The projections are based on historical trends and current estimates. These projections should be used only with full awareness of the inherent limitations of population projections in general and with knowledge of the procedures and assumptions described in this document.  -->
 
 # METHODS
 
@@ -93,7 +119,7 @@ P_{t+1} = P_t + B_t - D_t + M_{t,in} - M_{t,out}
 
 Where $P_t$ is the population at time $t$, $B_t$ is the births at time $t$, $D_t$ is the deaths at time $t$, and $M_{t, in/out}$ refers to in- or out-migration at time $t$.
 
-Cohort-component requires data on each component process disaggregated by the dimensionality of the population to be projected. To produce detailed projections by age, sex, and race, detailed data age, sex, and race. Certain elements of these data can be difficult to obtain for complete national coverage of sub-national geographies. There is no comprehensive dataset of gross migration estimates by age, sex, and race for all U.S. counties. Birth and death data are typically obtained through the National Center of Health Statistics (NCHS) vital events registration databases [@martin2018births]. Birth data, however, are only available for counties with populations greater than 100k and Death data are only available for cells with more than 10 deaths [@tiwari2014impact]. These limitations surrounding fertility, mortality, and migration render a universal county-level population projection difficult, if not impossible, to complete using publicly available datasets.
+Cohort-component requires data on each component process disaggregated by the dimensionality of the population to be projected. To produce detailed projections by age, sex, and race, detailed data age, sex, and race. Certain elements of these data can be difficult to obtain for complete national coverage of sub-national geographies. There is no comprehensive data set of gross migration estimates by age, sex, and race for all U.S. counties. Birth and death data are typically obtained through the National Center of Health Statistics (NCHS) vital events registration databases [@martin2018births]. Birth data, however, are only available for counties with populations greater than 100k and Death data are only available for cells with more than 10 deaths [@tiwari2014impact]. These limitations surrounding fertility, mortality, and migration render a universal county-level population projection difficult, if not impossible, to complete using publicly available data sets.
 
 An alternative to cohort-component is the Hamilton-Perry method [@swanson2010forecasting; @baker2017cohort ], which uses cohort-change ratios (CCRs) in place of components to project populations. The basic CCR equation is found in equation \ref{eq:ccr}.
 
@@ -104,37 +130,24 @@ CCR_{t} & = & \frac {_nP_{x,t}} {_nP_{x-y,t-1}}\\
 
 Where $_nP_{x,t}$ is the population aged $x$ to $x+n$ in time $t$ and $_nP_{x-y,t}$ is the population aged $x$ to $x+n-y$ in time $t$ where $y$ refers to the time difference between time periods. These CCRs are calculated for each age group $a$, for each sex group $s$, for each race group $r$, in each time period $t$, in county $c$. Thus to find the population of ten to fourteen year olds ($_5P_{10}$) in five years ($t+1$), we multiply the ratio of the population aged 10-14 in time $t$ ($_5P_{10,t}$) to the population aged 5-9 five-years prior in time $t-1$ ($_5P_{10-5,t-1}$) to the population aged 0-4 in time $t$ ($_5P_{10-5,t}$). ie, if we have 100 5-9 year olds five years ago and we now have 125 10-14 year olds and 90 5-9 year olds, we can expect the number of 10-14 year olds in 5 years to be (125/100 $\cdot$ 90 = 112.5).
 
-Two age groups must have special consideration: the population aged 0-4 ($_5P_0$) and the population comprising the open-ended interval ($_{\infty}P_{85}$). The population aged 0-4 ($_5P_0$) must have special consideration since the preceding/proceeding age groups do not exist for these age groups. 
 
-
-To project 0-4 year olds, I use the child-woman ratio (CWR)
-
-\begin{eqnarray}\label{eq:cwr}
-CWR_{t} & = & \frac{_5P_{0,t}}{_{45}W_{15,t}}\\
-{_nP_{x+t}} & = & CWR_{t} \,\, \cdot \,\, {_{45}W_{15,t+1}}\nonumber
-\end{eqnarray}
-
-Where $_{45}W_{15}$ is the population of women in child-bearing ages 15-50.
-
-To calculate the CCR for the open-ended age group,
-\begin{eqnarray}\label{eq:ccr_open}
-{_{\infty}CCR_{85,t}} & = & \frac{_{\infty}P_{85,t}}{_{\infty}P_{85-y,t-1}}\\
-{_{\infty}P_{85+t}} & = & {_{\infty}CCR_{85,t}} \,\, \cdot \,\, {_{\infty}P_{85-y,t}}\nonumber
-\end{eqnarray}
-
-CCRs offer several advantages and disadvantages over the use of a cohort-component model. CCRs are considerably more parsimonious than cohort-component. Calculation of CCRs for use in population projections requires data as minimal as an age-sex distributions at two time periods -- data ubiquitous across multiple scales, countries, and time periods. However, this parsimony comes at a relatively steep price: CCRs can lead to impossibly explosive growth in long-range projections due to  the natural compounding of the ratios. Consider the growth currently occurring in McKenzie County, North Dakota (FIPS=38053) driven by the Shale oil boom. In 2010 McKenzie had a population of 6,360 that had ballooned to 12,792 by 2015, according to the Vintage 2016 population estimates from the US Census Bureau, with a CCR for the 20-24 year old population of 2.46 (416  to 1,027). Implementing a 50-year population projection using that CCR would create a projected population that is approximately 8,000 times larger ($2.46^{10}$) -- clearly an improbable number given the small, rural nature of its population.
+CCRs offer several advantages and disadvantages over the use of a cohort-component model. CCRs are considerably more parsimonious than cohort-component. Calculation of CCRs for use in population projections requires data as minimal as an age-sex distributions at two time periods -- data ubiquitous across multiple scales, countries, and time periods. However, this parsimony comes at a relatively steep price: CCRs can lead to impossibly explosive growth in 1) long-range projections due to  the natural compounding of the ratios and 2) in small cell sizes with impossibly large CCRs due to a small numeric change in population. As outlined above, consider the growth currently occurring in McKenzie County, North Dakota (FIPS=38053) driven by the Shale oil boom. In 2010 McKenzie had a population of 6,360 that had ballooned to 12,792 by 2015, according to the Vintage 2016 population estimates from the US Census Bureau, with a CCR for the 20-24 year old population of 2.46 (416  to 1,027). Implementing a 50-year population projection using that CCR would create a projected population that is approximately 8,000 times larger ($2.46^{10}$) -- clearly an improbable number given the small, rural nature of its population. Kalawao County, Hawaii (FIPS= 15005) has 2017 estimated population of just 88 persons. Numeric change in any given age-group could lead to impossibly large CCRs in a county as sparsely population as Kalawao County.
 
 ## Cohort Change Differences
-The implementation of CCRs naturally implies a multiplicative model, typically utilizing leslie matrices. It is possible, however, to implement an **additive** model by using the *difference* in population rather than the *ratio* of population.
+The implementation of CCRs naturally implies a multiplicative model, typically utilizing Leslie matrices. It is possible, however, to implement an **additive** model by using the *difference* in population rather than the *ratio* of population.
 
 \begin{eqnarray}\label{eq:ccd}
 CCD_{t} & = & {_nP_{x,t}} \,\, - \,\, {_nP_{x-y,t-1}}\\
 {_nP_{x+t}} & = & CCD_{t} \,\, + \,\, {_nP_{x-y,t}}\nonumber
 \end{eqnarray}
 
-Where $_nP_{x,t}$ is the population aged $x$ to $x+n$ in time $t$ and $_nP_{x-y,t}$ is the population aged $x$ to $x+n-y$ in time $t$ where $y$ refers to the time difference between time periods. These CCDs are calculated for each age group $a$, for each sex group $s$, for each race group $r$, in each time period $t$, in county $c$. Thus to find the population of ten to fourteen year olds ($_5P_{10}$) in five years ($t+1$), we add the differene of the population aged 10-14 in time $t$ ($_5P_{10,t}$) to the population aged 5-9 five-years prior in time $t-1$ ($_5P_{10-5,t-1}$) to the population aged 0-4 in time $t$ ($_5P_{10-5,t}$). ie, if we have 100 5-9 year olds five years ago and we now have 125 10-14 year olds and 90 5-9 year olds, we can expect the number of 10-14 year olds in 5 years to be (125-100 $+$ 90 = 115).
+Where $_nP_{x,t}$ is the population aged $x$ to $x+n$ in time $t$ and $_nP_{x-y,t}$ is the population aged $x$ to $x+n-y$ in time $t$ where $y$ refers to the time difference between time periods. These CCDs are calculated for each age group $a$, for each sex group $s$, for each race group $r$, in each time period $t$, in county $c$. Thus to find the population of ten to fourteen year olds ($_5P_{10}$) in five years ($t+1$), we add the difference of the population aged 10-14 in time $t$ ($_5P_{10,t}$) to the population aged 5-9 five-years prior in time $t-1$ ($_5P_{10-5,t-1}$) to the population aged 0-4 in time $t$ ($_5P_{10-5,t}$). ie, if we have 100 5-9 year olds five years ago and we now have 125 10-14 year olds and 90 5-9 year olds, we can expect the number of 10-14 year olds in 5 years to be (125-100 $+$ 90 = 115).
 
-CCDs are just as parimonious as CCRs but have the additional advantage of producing linear growth rather than exponential growth. However, for areas experiencing population declines, CCDs have the potential of creating impossible negative populations through linear decline. A blended approach, using CCDs in areas projected to increase and CCRs in areas projected to decrease creates more utility in the projections at the cost of some accuracy (see \ref{table:1}).
+CCDs are just as parsimonious as CCRs but have the additional advantage of producing linear growth rather than exponential growth. However, for areas experiencing population declines, CCDs have the potential of creating impossible negative populations through linear decline. A blended approach, using CCDs in areas projected to increase and CCRs in areas projected to decrease creates more utility in the projections and previous research has shown blended linear/exponential population projections outperform both linear and exponential models, respectively [@wilson2016evaluation].
+
+```{r lexisplot, echo=FALSE, message = FALSE, warning = FALSE, fig.cap=paste("**Lexis Diagrams for CCRs and CCDs.** (a) demonstrates the general framework for Cohort-change ratios and (b) the general framework for cohort-change differences. The observed populations are in bold while the projected populations are italicized.  \\label{figure1}")}
+```
+
 
 ## Projecting CCRs and CCDs
 
@@ -156,21 +169,19 @@ The level component is defined as:
 \xi_t \sim i.i.d. \,\, N(0, \theta_{\xi}^2) \nonumber
 \end{eqnarray}
 
-These equations specify a trend where the level $\mu_t$ vary over time, governed by the variance of the disturbance term $\xi_t$ in their equations. Here all individual CCRs/CCDs ($CCR_{iasr}$) over all  series are modelled (n=`r length(z)`) in individual UCMs.
+These equations specify a trend where the level $\mu_t$ vary over time, governed by the variance of the disturbance term $\xi_t$ in their equations. Here all individual CCRs/CCDs ($CCR_{asrc}$) over all  series are modeled (n=`r nrow(base_projunfitted[which(base_projunfitted$YEAR==2005 & base_projunfitted$TYPE == "CCD"),])`) in individual UCMs.
 
-Rather than use the prediction intervals output from the UCMs, I set the upper and lower bounds as the projected UCM plus or minus the 80th percentile based on the standard deviation of the original time series. 
+<!-- For the CWRs, I project the CWRs within a constrained forecast interval. CWRs are constrained to lie between ($a,b$). I limit CWRs such that each age/race/county combination are constrained within the maximum/minimum of the time series such that $a=0.14$ (or a total fertility rate of approximately 1 [@hauer13; @schmertmann2017bayesian]) for all projections and $b=max(CWR_{arc})$. I then transform the data using a scaled logit transformation to map ($a,b$) to the whole real line: -->
 
-For the CWRs, I projected the CWRs within a constrained forecast interval. CWRs are constrained to lie between ($a,b$). I limit CWRs such that each age/race/county combination are be constrained within the maximum/minimum of the time series such that $a=0.14$ (or a total fertility rate of approximately 1 [@hauer13; @schmertmann2017bayesian]) for all projections and $b=max(CWR_{arc})$. I then transform the data using a scaled logit transformation to map ($a,b$) to the whole real line:
-  
-\begin{equation}
-y = log\big(\frac{x-a}{b-x}\big)
-\end{equation}
+<!-- \begin{equation} -->
+<!-- y = log\big(\frac{x-a}{b-x}\big) -->
+<!-- \end{equation} -->
 
-Where $x$ is the original data and $y$ is the transformed data. 
+<!-- Where $x$ is the original data and $y$ is the transformed data.  -->
 
 The projected CCRs and CCDs are then input into Leslie matrices to create projected populations [@caswell2001matrix].
 
-Equation \ref{eq:ccrleslie} describes the leslie matrices for CCRs and equation \ref{eq:ccdleslie} describes the leslie matrices for CCDs.
+Equation \ref{eq:ccrleslie} describes the Leslie matrices for CCRs and equation \ref{eq:ccdleslie} describes the Leslie matrices for CCDs.
 
 \begin{equation}\label{eq:ccrleslie}
 \begin{bmatrix}
@@ -222,22 +233,44 @@ n_{0} & 0       	& 0       	& \dots 		& 0 & 0 \\
 
 \begin{equation}
 P_{t+1}
-\equiv
+=
 \begin{bmatrix}
-\sum_{j=1}^{n} \mathbf{T_{1,j}} \\
-\sum_{j=1}^{n} \mathbf{T_{2,j}} \\
+\sum \mathbf{T_{1j}} \\
+\sum \mathbf{T_{2j}} \\
 \vdots \\
-\sum_{j=1}^{n} \mathbf{T_{17,j}}\nonumber
+\sum \mathbf{T_{17j}}\nonumber
 \end{bmatrix}
 \end{equation}
 
+\autoref{eq:ccrleslie} and \autoref{eq:ccdleslie} both require special consideration for two specific age groups: the population aged 0-4 ($_5P_0$) and the population comprising the open-ended interval ($_{\infty}P_{85}$; $CCR_{17}$ and $CCD_{17}$). The population aged 0-4 ($_5P_0$) and 85+ ($_{\infty}P_{85}$) must have special consideration since the preceding/proceeding age groups do not exist for these age groups. 
+
+To project 0-4 year olds, I use the child-woman ratio (CWR)
+
+\begin{eqnarray}\label{eq:cwr}
+CWR_{t} & = & \frac{_5P_{0,t}}{_{45}W_{15,t}}\\
+{_nP_{x+t}} & = & CWR_{t} \,\, \cdot \,\, {_{45}W_{15,t+1}}\nonumber
+\end{eqnarray}
+
+Where $_{45}W_{15}$ is the population of women in child-bearing ages 15-50. I use the state/race-specific CWRs for member counties.
+
 The population aged 0-4 in time $t+1$ are projected by applying a 1.05 sex ratio at birth (SRB) to the projected children born of women of childbearing age $[15,50)$ in time $t+1$.
+
+To calculate the CCR/CCD for the open-ended age group,
+\begin{eqnarray}
+{_{\infty}CCR_{85,t}} & = & \frac{_{\infty}P_{85,t}}{_{\infty}P_{85-y,t-1}}\\
+{_{\infty}P_{85+t}} & = & {_{\infty}CCR_{85,t}} \,\, \cdot \,\, {_{\infty}P_{85-y,t}}\nonumber\\
+{_{\infty}CCD_{85,t}} & = & {_{\infty}P_{85,t}} - {_{\infty}P_{85-y,t-1}}\\
+{_{\infty}P_{85+t}} & = & {_{\infty}CCD_{85,t}} \,\, + \,\, {_{\infty}P_{85-y,t}}\nonumber
+\end{eqnarray}
+
+If a given race/county combination is projected to increase, I use CCDs and if a given race/county combination is projected to decline, I use CCRs.
+
 
 ## DATA
 
-Data used to project the populations consist of a single primary data source: the National Vital Statistics System U.S. Census Populations with Bridged Race Categories data set^[Data can be downloaded here: https://seer.cancer.gov/popdata/download.html]. These data harmoize racial classifications across disparate time periods to allow population estimates to be sufficiently comparable across space and time. All county boundaries are generally rectified as well. The National Center for Health Statistics bridge the 31 race categories used in Census 2000 and 2010 with the four race categories used in the 1977 Office of Management and Budget standards.
+Data used to project the populations consist of a single primary data source: the National Vital Statistics System U.S. Census Populations with Bridged Race Categories data set^[Data can be downloaded here: https://seer.cancer.gov/popdata/download.html]. These data harmonize racial classifications across disparate time periods to allow population estimates to be sufficiently comparable across space and time. All county boundaries are generally rectified as well. The National Center for Health Statistics bridge the 31 race categories used in Census 2000 and 2010 with the four race categories used in the 1977 Office of Management and Budget standards.
 
-There are two primary bridged-race data sets. The first covers the time period 1969-2016 and utilizes three race groups: White, Black, and Other. The second covers the time period 1990-2016 and uses four race groups (White, Black, American Indian/Alaska Native, and Asian/Pacific Islander) as well as two origin groups (Hispanic and Non-Hispanic). Evaluation of the population projections makes use of the three race group dataset covering 1969-2016.
+There are two primary bridged-race data sets. The first covers the time period 1969-2016 and utilizes three race groups: White, Black, and Other. The second covers the time period 1990-2016 and uses four race groups (White, Black, American Indian/Alaska Native, and Asian/Pacific Islander) as well as two origin groups (Hispanic and Non-Hispanic). Evaluation of the population projections makes use of the three race group data set covering 1969-2016.
 
 ## Extra considerations
 
@@ -247,11 +280,29 @@ There are two primary bridged-race data sets. The first covers the time period 1
 **Miscellaneous**
 In the event a UCM contained NA or infinite values or produced covariance matrices with values larger than 10,000,000, the projections were set to 0. Upper and Lower bounds of failed UCMs were set to 0. Any infinite, NA, or NAN CCR, CCD, or CWR was set to 0. Any projected negative populations are also set to 0.
 
+## Projection Controls
+As shown below, any set of population projections are likely to produce higher than expected projections (see \autoref{tab:TOTALeval}). To prevent runaway population growth, I control the projected output to the Shared Socioeconomic Pathways (SSPs) [@o2014new]. The SSPs are socio-economic scenarios that derive emissions scenarios coupled with climate policies. They are designed to evaluate both climate change impacts and adaptation measures in harmony with the Representative Concentration Pathways (RCPs) for emission scenarios.
+
+The five SSPs are colloquially named SSP1 (Sustainability), SSP2 (Middle of the Road), SSP3 (Regional Rivalry), SSP4 (Inequality), and SSP5 (Fossil-fueled Development) [@o2017roads]. These five SSPs cover potential futures involving various growth policies, fossil-fuel usage, mitigation policies, adaptation policies, and population change [@samir2017human].
+
+<!-- ```{r echo=FALSE, fig.cap = "**The five Shared Soceioeconomic Pathways (SSPs).** Taken from [@o2017roads].\\label{SSPs}"} -->
+<!-- library(knitr) -->
+<!-- knitr::include_graphics("./bridged_race_files/figure-latex/SSPsjiang.png") -->
+<!-- ``` -->
+
+Each SSP contains projected population information in five-year increments for 5-year age groups (0-100+) and two sex groups (Male and Female) for the period 2020-2100 and I truncate the open-ended interval from 100+ to 85+ to be consistent with US Census Bureau population estimates. I control my projected age/sex/race/county projections to the the SSPs by using
+
+\begin{equation}
+P_t = \frac{p_{asrc}}{p_{as}} \cdot P_{as, SSP}
+\end{equation}
+
+\noindent where $p_{asrc}$ refers to the age/sex/race/county specific population projected as outlined above, $p_{as}$ refers to the age/sex specific population projection, and $P_{as, SSP}$ refers to the age/sex specific population projection for each SSP.
+
 # EVALUATIONS
 
-To evaluate the projection accuracy, I use the base period 1980-2000 to project the population for eighteen age groups, two sexes, three races (White, Black, Other), and `r length(unique(paste0(z$STATE, z$COUNTY)))` counties for the projection period 2000-2015. I utilize an ex-post facto analysis at periods 2005, 2010, and 2015 using a pure CCD model (named ADD), a pure CCR model (named MULT), and blended model (named ADDMULT). The ADDMULT model utilizes CCDs if a county is projected to grow and CCRs if it is projected to decline. Blended models have been shown to outperform both purely linear or purely exponential models in simple extrapolation approaches to population projections [@wilson2016evaluation].
+To evaluate the projection accuracy, I use the base period 1969-2000 to project the population for eighteen age groups, two sexes, three races (White, Black, Other), and `r length(unique(paste0(base_projunfitted$STATE, base_projunfitted$COUNTY)))` counties for the projection period 2000-2015. I utilize an ex-post facto analysis at periods 2005, 2010, and 2015 using a pure CCD model, a pure CCR model, and blended model CCR/CCD). The CCR/CCD model utilizes CCDs if a county is projected to grow and CCRs if it is projected to decline. Blended models have been shown to outperform both purely linear or purely exponential models in simple extrapolation approaches to population projections [@wilson2016evaluation].
 
-In keeping with demographic tradition [@hauer13; @booth2006demographic], I evaluate the projections using three primary statistics. To determine the overall accuray of the projections, I use Absolute Percent Errors (APE), to determine the bias of the projections I use the Algebraic Percent Error (ALPE), and to determine the accuracy of the uncertainty interval I evaluate the percentage of actual counts within the 80th percentage projection interval. In some places I have subsituted a Symmetric  Absolute Percent Error (SAPE) [@shcherbakov2013survey].
+In keeping with demographic tradition [@hauer13; @booth2006demographic], I evaluate the projections using three primary statistics. To determine the overall accuracy of the projections, I use Absolute Percent Errors (APE), to determine the bias of the projections I use the Algebraic Percent Error (ALPE), and to determine the accuracy of the uncertainty interval I evaluate the percentage of actual counts within the 80th percentage projection interval. In some places I have substituted a Symmetric  Absolute Percent Error (SAPE) [@shcherbakov2013survey].
 
 Equations \ref{eq:evals} describe the equations used to evaluate errors. $P_i$ refers to the projected value and $A_i$ refers to the actual, observed value.
 
@@ -265,11 +316,11 @@ SAPE & = & \frac{|(P_i - A_i)|} {(P_i + A_i)}
 ## Overall Errors
 
 
-Table **1** reports the overall errors for the sum of the population in each of the subsequent states and counties. Overall the purely ADDITIVE model outperformed the purely MULTIPLICATIVE model, suggesting CCDs in this model could produce more accurate results compared to CCRs. It should also be noted that all model variants (ADD, MULT, and ADDMULT) have a tendency to over-project the overall population in the United States.
+\autoref{tab:TOTALeval} reports the overall errors for the sum of the population for the whole US. Overall the pure CCD model outperformed the purely CCR model, suggesting CCDs in this model could produce more accurate results compared to CCRs. It should also be noted that all model variants (CCD, CCR, and CCR/CCD) have a tendency to over-project the overall population in the United States.
 
 ```{r TOTALeval, echo=FALSE, message=FALSE, warning=FALSE, results='asis', cache=TRUE, fig.cap = "\\label{tab:TOTALeval}"}
 library(kableExtra)
-eval_ucm_statetotal <- z %>%
+eval_ucm_statetotal <- base_projunfitted %>%
   #mutate(RACE = substr(countyrace, 7,25))
   group_by(TYPE, YEAR) %>%
   dplyr::summarise(POPULATION = sum(POPULATION),
@@ -286,17 +337,17 @@ eval_ucm_statetotal <- z %>%
          ALPE = percent(FLAG1),
          in80percentile = percent(FLAG2/num),
          POPULATION = prettyNum(POPULATION, big.mark=",", scientific=FALSE)) %>%
-  select(-num, -FLAG2, -in80percentile, -A, -B, -C, -FLAG1, -ALPE) %>%
+  dplyr::select(-num, -FLAG2, -in80percentile, -A, -B, -C, -FLAG1, -ALPE, -LOW, -HIGH) %>%
   filter(!TYPE == "BASE")
 
 kable(eval_ucm_statetotal, format='pandoc', caption="\\label{tab:TOTALeval}**Evaluation of overall total errors for the entire United States.**", digits = 4)
 ```
 
-Table **2** reports the overall errors for the sum of the population in each of the counties. Here we can see that for the average county, the ADDITIVE and ADDMULT models produce similar APEs but the ADDMULT model tends to produce slightly lower APEs when compared to the purely ADD model. In all cases, the errors associated with the MULT model are greater than the ADD or ADDMULT varieties.
+\autoref{tab:County eval} reports the overall errors for the sum of the population in each of the counties. Here we can see that for the average county, the CCD and CCR/CCD models produce similar Apes but the CCR/CCD model tends to produce slightly lower Apes when compared to the purely CCD model. In all cases, the errors associated with the CCR model are greater than the CCD or CCR/CCD varieties.
 
-```{r COUNTY TOTAL eval, echo=FALSE, message=FALSE, warning=FALSE, results='asis', cache=TRUE}
+```{r COUNTY TOTAL eval, echo=FALSE, message=FALSE, warning=FALSE, results='asis', cache=TRUE, fig.cap = "\\label{tab:COUNTYeval}"}
 library(kableExtra)
-eval_ucm_cntytotal <- z %>%
+eval_ucm_cntytotal <- base_projunfitted %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, YEAR, TYPE) %>%
   dplyr::summarise(POPULATION = sum(POPULATION),
@@ -313,28 +364,27 @@ eval_ucm_cntytotal <- z %>%
                    MALPE = quantile(FLAG1, 0.5),
                    in80percentile = sum(FLAG2)/length(FLAG2),
                     n = length(FLAG1)) %>%
-
   mutate(MAPE= percent(MAPE),
          MALPE = percent(MALPE),
          in80percentile = percent(in80percentile))
 
 mapeeval<- eval_ucm_cntytotal %>%
-  select(YEAR, TYPE, MAPE, n) %>%
+  dplyr::select(YEAR, TYPE, MAPE, n) %>%
   spread(YEAR, MAPE) %>%
   mutate(EVAL = "Median APE")
 malpeeval <- eval_ucm_cntytotal %>%
-  select(YEAR, TYPE, MALPE,n ) %>%
+  dplyr::select(YEAR, TYPE, MALPE,n ) %>%
   spread(YEAR, MALPE) %>%
   mutate(EVAL = "Median ALPE")
 
 eval80<- eval_ucm_cntytotal %>%
-  select(YEAR, TYPE, in80percentile,n ) %>%
+  dplyr::select(YEAR, TYPE, in80percentile,n ) %>%
   spread(YEAR, in80percentile) %>%
   mutate(EVAL = "In 80th percentile")
 
 table <- rbind(mapeeval, malpeeval) %>%
   rbind(., eval80) %>%
-  select(TYPE, n, EVAL, "2005", "2010", "2015")
+  dplyr::select(TYPE, n, EVAL, "2005", "2010", "2015")
 
 kable(table, caption="**Evaluation of overall errors for each county.**")
 
@@ -342,10 +392,10 @@ kable(table, caption="**Evaluation of overall errors for each county.**")
 
 
 
-\autoref{county map} shows the absolute percent errors associated with the total population for the ADDMULT model in U.S. counties in 2015. Most states and counties see relatively low errors with the median APE of just 8.29% by 2015, however some isolated pockets of high errors do exist randomly distributed throughout the United States. Additionally, 94.8% of counties had observed population totals within the 80th percentile prediction interval with the ADDMULT model by 2015. This large number of counties could suggest that prediction bands at at the scale of population totals in counties could be too wide. 
+\autoref{countymap} shows the absolute percent errors associated with the total population for the CCR/CCD model in U.S. counties in 2015. Most states and counties see relatively low errors with the median APE of just 8.29% by 2015, however some isolated pockets of high errors do exist randomly distributed throughout the United States. Additionally, 94.8% of counties had observed population totals within the 80th percentile prediction interval with the CCR/CCD model by 2015. This large number of counties could suggest that prediction bands at at the scale of population totals in counties could be too wide. 
 
-```{r, echo=FALSE, , message=FALSE, warning=FALSE, cache=TRUE, paged.print=FALSE, fig.cap=paste("**Map of county errors of the total population in 2015 using the ADDMULT model.** Here I show the geographic distribution of absolute percent errors. Most states and counties have low error rates of the total population with isolated pockets of large errors. \\label{county map}"), results='asis'}
-eval_ucm_cntytotal <- z %>%
+```{r, echo=FALSE, , message=FALSE, warning=FALSE, cache=TRUE, paged.print=FALSE, fig.cap=paste("**Map of county errors of the total population in 2015 using the CCR/CCD model.** Here I show the geographic distribution of absolute percent errors. Most states and counties have low error rates of the total population with isolated pockets of large errors. \\label{countymap}"), results='asis'}
+eval_ucm_cntytotal <- base_projunfitted %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, GEOID, YEAR, TYPE) %>%
   dplyr::summarise(POPULATION = sum(POPULATION, na.rm=T),
@@ -358,8 +408,8 @@ eval_ucm_cntytotal <- z %>%
          in90percentile = FLAG2/num) %>%
   ungroup() %>%
   filter(YEAR == 2015,
-         TYPE == "ADDMULT")%>%
-  select(FLAG1, STATE, GEOID)
+         TYPE == "CCD/CCR")%>%
+  dplyr::select(FLAG1, STATE, GEOID)
 
 counties <- append_data(counties, eval_ucm_cntytotal, key.shp = "GEOID", key.data = "GEOID", ignore.duplicates = TRUE) 
 
@@ -393,11 +443,11 @@ m_cont
 
 ## Age Structure Error
 
-Table **3** reports the overall errors for age groups at the county level. All three models produce similar APEs. For any given county, the average error is approximately 11%. Similar to the overall errors, the bias tends to be for over-projection of age groups as all of the ALPEs are positive.
+\autoref{ages total} reports the overall errors for age groups at the county level. All three models produce similar Apes. For any given county, the average error is approximately 11%. Similar to the overall errors, the bias tends to be for over-projection of age groups as all of the ALPEs are positive.
 
-```{r ages total, echo=FALSE, results='asis', message=FALSE, warning=FALSE, cache=TRUE, fig.cap=paste("**Evaluation of Age Group Errors.**\\label{ages total}")}
+```{r agestotal, echo=FALSE, results='asis', message=FALSE, warning=FALSE, cache=TRUE, fig.cap=paste("**Evaluation of Age Group Errors.**\\label{agestotal}")}
 
-eval_ucm_agetotal <- z %>%
+eval_ucm_agetotal <- base_projunfitted %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, AGE, YEAR, TYPE) %>%
   dplyr::summarise(POPULATION = sum(POPULATION),
@@ -419,21 +469,21 @@ eval_ucm_agetotal <- z %>%
          MALPE = percent(MALPE),
          in80percentile = percent(in80percentile))
 mapeeval<- eval_ucm_agetotal %>%
-  select(YEAR, TYPE, MAPE, n) %>%
+  dplyr::select(YEAR, TYPE, MAPE, n) %>%
   spread(YEAR, MAPE) %>%
   mutate(EVAL = "Median APE")
 malpeeval <- eval_ucm_agetotal %>%
-  select(YEAR, TYPE, MALPE, n) %>%
+  dplyr::select(YEAR, TYPE, MALPE, n) %>%
   spread(YEAR, MALPE) %>%
   mutate(EVAL = "Median ALPE")
 eval80<- eval_ucm_agetotal %>%
-  select(YEAR, TYPE, in80percentile, n) %>%
+  dplyr::select(YEAR, TYPE, in80percentile, n) %>%
   spread(YEAR, in80percentile) %>%
   mutate(EVAL = "In 80th percentile")
 
 table <- rbind(mapeeval, malpeeval) %>%
   rbind(., eval80) %>%
-  select(TYPE, n, EVAL, "2005", "2010", "2015")
+  dplyr::select(TYPE, n, EVAL, "2005", "2010", "2015")
 
 kable(table, caption="**Evaluation of Age Group Errors.**", digits = 4)
 ```
@@ -442,8 +492,8 @@ kable(table, caption="**Evaluation of Age Group Errors.**", digits = 4)
 
 \autoref{ageexample} shows projected age structures in nine samples counties across three county types -- college counties, suburban counties, and retirement counties. In all three county types the age structures are preserved in the projections. All three county types exhibit differing age structures with important considerations. For college counties, the college-age population (those aged 15-24) do not age in place within those communities. The large population peaks in those counties show great in-migration at the college ages and then great out-migration afterwards. In suburban counties, a "double hump" age structure is typically present with large numbers of both adolescents and middle-aged adults. Most twenty-somethings either cannot afford to live in affluent suburban areas, move away for school or work, or do not have the family reasons for living there. Retirement communities are often identified by the large numbers of populations over the age of 55. 
 
-```{r, echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Age structures of various county types.** I compare the projected age structures to the observed age structures in nine counties across three county types using the ADD/MULT model. (a) demonstrates counties with major universities, (b) demonstrates sample suburban counties, and (c) demonstrates sample retirement counties. All three county types have age structures largely preserved despite widely different age structures.\\label{ageexample}")}
-collegecampuses<- z[which(z$GEOID %in% c("13059","36109", "42027")),]
+```{r, echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Age structures of various county types.** I compare the projected age structures to the observed age structures in nine counties across three county types using the CCR/CCD model. (a) demonstrates counties with major universities, (b) demonstrates sample suburban counties, and (c) demonstrates sample retirement counties. All three county types have age structures largely preserved despite widely different age structures.\\label{ageexample}")}
+collegecampuses<- base_projunfitted[which(base_projunfitted$GEOID %in% c("13059","36109", "42027")),]
 collegecampuses <- collegecampuses %>%
   group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
   dplyr::summarise(A = sum(A),
@@ -453,7 +503,7 @@ collegecampuses <- collegecampuses %>%
          AGE = AGE*5-5) %>%
   filter(YEAR %in% c(2005,2015)) %>%
   mutate(YEAR = as.factor(YEAR))
-suburban<- z[which(z$GEOID %in% c("18057","47187", "13117")),]
+suburban<- base_projunfitted[which(base_projunfitted$GEOID %in% c("18057","47187", "13117")),]
 suburban <- suburban %>%
   group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
   dplyr::summarise(A = sum(A),
@@ -464,7 +514,7 @@ suburban <- suburban %>%
   filter(YEAR %in% c(2005,2015)) %>%
   mutate(YEAR = as.factor(YEAR))
 
-retirement<- z[which(z$GEOID %in% c("26089","05005", "37175")),]
+retirement<- base_projunfitted[which(base_projunfitted$GEOID %in% c("26089","05005", "37175")),]
 retirement <- retirement %>%
   group_by(GEOID, NAME, state, AGE, TYPE, YEAR) %>%
   dplyr::summarise(A = sum(A),
@@ -478,11 +528,11 @@ retirement <- retirement %>%
 
 figure_age = function(x, title){
   a<-ggplot(x) +
-    geom_line(data = x[which(x$TYPE =="ADDMULT"),], aes(x = AGE, y=A, colour = YEAR, linetype= "dotted")) +
-    geom_line(data = x[which(x$TYPE =="ADDMULT"),], aes(x = AGE, y=POPULATION, colour = YEAR, linetype= "solid")) +
+    geom_line(data = x[which(x$TYPE =="CCD/CCR"),], aes(x = AGE, y=A, colour = YEAR, linetype= "dotted")) +
+    geom_line(data = x[which(x$TYPE =="CCD/CCR"),], aes(x = AGE, y=POPULATION, colour = YEAR, linetype= "solid")) +
     theme_bw() +
     scale_color_manual(labels = c("2005", "2015"), values = c("red", "blue")) +
-    scale_linetype_manual(name = "",labels = c("CCR/CWR", "Observed"), values=c("dashed", "solid"))+
+    scale_linetype_manual(name = "",labels = c("CCD/CCR", "Observed"), values=c("dashed", "solid"))+
     labs(x = "Age Group",
          y = "Population",
          title = paste0(title)) +
@@ -505,10 +555,10 @@ plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
 ```
 
 
-\autoref{agestructures} shows the Algebraic Percent Errors by age group for all three evaluation periods. For every age below 60, the ADD and ADD/MULT models produce lower ALPEs, but for age groups over 60, the Mult model produces lower ALPEs. This could be reflective of mortality being the dominant population process for older age populations and is especially pronounced in the 85+ age group. Here, the 50th percentile ALPE for ADD and ADD/MULT is approximately 20% while the Mult model is just under 10%. Future projections could blend the two together and use CCRs for the open-ended age interval.
+\autoref{agestructures} shows the Algebraic Percent Errors by age group for all three evaluation periods. For every age below 60, the CCD and CCR/CCD models produce lower ALPEs, but for age groups over 60, the CCR model produces lower ALPEs. This could be reflective of mortality being the dominant population process for older age populations and is especially pronounced in the 85+ age group. Here, the 50th percentile ALPE for CCD and CCR/CCD is approximately 20% while the Mult model is just under 10%. This bias is virtually eliminated when controlling the populations to the Age/Sex total of the United States.
 
-```{r,echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Algebraic Percent Errors by age group.** I plot the 50th percentile Algebraic Percent Error (ALPE) by age group for 2005, 2010, and 2015.\\label{agestructures}")}
-eval_ucm_agetotal <- z %>%
+```{r,echo=FALSE, results='asis', cache=TRUE, message=FALSE, warning=FALSE,  fig.cap=paste("**Algebraic Percent Errors by age group.** I plot the 50th percentile Algebraic Percent Error (ALPE) by age group.\\label{agestructures}")}
+eval_ucm_agetotal <- base_projunfitted %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, AGE, YEAR, TYPE) %>%
   dplyr::summarise(POPULATION = sum(POPULATION),
@@ -546,8 +596,48 @@ eval_ucm_agetotal <- z %>%
     AGE == 17 ~ 80,
     AGE == 18 ~ 85
   ))
-  #        MALPE = percent(MALPE),
-  #        in80percentile = percent(in80percentile))
+
+eval_ucm_agetotal2 <- z %>%
+  filter(!TYPE == "BASE") %>%
+  group_by(STATE, COUNTY, AGE, YEAR, TYPE) %>%
+  dplyr::summarise(POPULATION = sum(POPULATION),
+                   A = sum(A),
+                   B = sum(B),
+                   C = sum(C),
+                   num = length(A)) %>%
+  mutate(FLAG1 = if_else(is.na((A/POPULATION)-1), 0,(A/POPULATION)-1),
+         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0),
+         in90percentile = FLAG2/num) %>%
+  ungroup() %>%
+  group_by(AGE, TYPE) %>%
+  dplyr::summarise(MAPE = quantile(abs(FLAG1), 0.5),
+                   MALPE = quantile(FLAG1, 0.5),
+                   in80percentile = sum(FLAG2)/length(FLAG2),
+                   n = length(FLAG2)) %>%
+  ungroup() %>%
+  mutate(AGE = case_when(
+    AGE == 1 ~ 0,
+    AGE == 2 ~ 5,
+    AGE == 3 ~ 10,
+    AGE == 4 ~ 15,
+    AGE == 5 ~ 20,
+    AGE == 6 ~ 25,
+    AGE == 7 ~ 30,
+    AGE == 8 ~ 35,
+    AGE == 9 ~ 40,
+    AGE == 10 ~ 45,
+    AGE == 11 ~ 50,
+    AGE == 12 ~ 55,
+    AGE == 13 ~ 60,
+    AGE == 14 ~ 65,
+    AGE == 15 ~ 70,
+    AGE == 16 ~ 75,
+    AGE == 17 ~ 80,
+    AGE == 18 ~ 85
+  ),
+  TYPE = "RAKED CCD/CCR")
+
+eval_ucm_agetotal <- rbind(eval_ucm_agetotal, eval_ucm_agetotal2)
 
 ggplot(data=eval_ucm_agetotal, aes(group = TYPE)) +
   geom_line(aes(x=AGE, y =MALPE, linetype=TYPE, col=TYPE)) +
@@ -559,11 +649,11 @@ ggplot(data=eval_ucm_agetotal, aes(group = TYPE)) +
 
 ## Race Errors
 
-\autoref{raceerrors} reports the ALPE and the APE distribution by race group for all counties. The White race group tends to have the lowest errors associated with the proejctions, followed by Black, and then Other.
+\autoref{raceerrors} reports the ALPE and the APE distribution by race group for all counties. The White race group tends to have the lowest errors associated with the projections, followed by Black, and then Other.
 
 
 ```{r, echo=FALSE, results='asis', cache=TRUE, , message=FALSE, warning=FALSE, fig.cap=paste("**Race group errors. (a) shows the Algebraic Percent Errors for all three methods and (b) shows the APE distribution of errors.** \\label{raceerrors}")}
-eval_ucm_agetotal <- z %>%
+eval_ucm_agetotal <- base_projunfitted %>%
   filter(!TYPE == "BASE") %>%
   group_by(STATE, COUNTY, RACE, YEAR, TYPE) %>%
   dplyr::summarise(POPULATION = sum(POPULATION),
@@ -616,11 +706,11 @@ plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
 
 ## Age, Sex, Race joint errors
 
-Finally, I show the joint errors associated with all possible Age/Sex/Race/County combinations. Here the average error for any given ASRC combination (such as Black Females aged 20-24 in Lincoln County NV) are approximately 11-12% for all three methods after 15 years. In contrast to the confidence bounds being too wide when discussing the overal total populations in counties, when examining any given ASRC combination it appeasrs that the projection intervals are too narrow for all three methods. Between two-thirds and three-fourths of observed populations fall within the 80th percentile.
+Finally, I show the joint errors associated with all possible Age/Sex/Race/County combinations. Here the average error for any given ASRC combination (such as Black Females aged 20-24 in Lincoln County NV) are approximately 11-12% for all three methods after 15 years. In contrast to the confidence bounds being too wide when discussing the overall total populations in counties, when examining any given ASRC combination it appears that the projection intervals are too narrow for all three methods. Between two-thirds and three-fourths of observed populations fall within the 80th percentile.
 
 ```{r ASRC total, echo=FALSE, results='asis', message=FALSE, warning=FALSE, fig.cap=paste("**Evaluation of Age Group Errors.**\\label{ages total}")}
 
-eval_ucm_cntytotal <- z %>%
+eval_ucm_cntytotal <- base_projunfitted %>%
   # filter(!TYPE == "BASE") %>%
   #group_by(STATE, COUNTY,SEX, RACE, AGE, YEAR, TYPE) %>%
    # dplyr::summarise(POPULATION = sum(POPULATION, na.rm=T),
@@ -645,23 +735,250 @@ eval_ucm_cntytotal <- z %>%
          in80percentile = percent(in80percentile))
 
 mapeeval<- eval_ucm_cntytotal %>%
-  select(YEAR, TYPE, SMAPE, num) %>%
+  dplyr::select(YEAR, TYPE, SMAPE, num) %>%
   spread(YEAR, SMAPE) %>%
   mutate(EVAL = "Median SAPE")
 
 
 eval80<- eval_ucm_cntytotal %>%
-  select(YEAR, TYPE, in80percentile, num) %>%
+  dplyr::select(YEAR, TYPE, in80percentile, num) %>%
   spread(YEAR, in80percentile) %>%
   mutate(EVAL = "In 80th percentile")
 
 table <- rbind(mapeeval, eval80) %>%
   #rbind(., eval80) %>%
-  select(TYPE, num, EVAL, "2005", "2010", "2015")
+  dplyr::select(TYPE, num, EVAL, "2005", "2010", "2015")
 
 kable(table, caption="**Evaluation of Age/Sex/Race/County joint Errors.**", digits = 4)
 ```
 
-#PROJECTIONS
+# PROJECTIONS
 
-Projections will go here.
+```{r sspstotal, echo=FALSE, results='asis', message=FALSE, warning=FALSE, fig.cap=paste("**Sample projected populations for Georgia.** Projections are aggregated to the state total for each five SSPs.  \\label{SSPprojections}")}
+
+this.county <- "GA"
+fipslist <- read_csv(file="https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", col_names = FALSE) %>%
+  mutate(GEOID = paste0(X2, X3)) %>%
+  dplyr::rename(state = X1,
+                STATEID = X2,
+                CNTYID = X3,
+                NAME = X4) %>%
+  filter(!STATEID %in% c("60", "66", "69", "72", "74", "78"))
+
+# Converting the fipslist into a unique list of 2-digit state ID's #
+stateid = unlist(list(unique(fipslist$STATEID)))
+# Converting the fipslist into a unique list of 5-digit county ID's #
+GEOID = unlist(list(unique(fipslist$GEOID)))
+
+statenames <- group_by(fipslist, STATEID, state) %>%
+  dplyr::summarise() %>%
+  dplyr::rename(STATE = STATEID,
+                STATENAM = state)
+
+test2 <- SSPs %>%
+  left_join(., statenames) %>%
+  dplyr::group_by(YEAR, STATENAM, STATE) %>%
+  dplyr::summarise(SSP1 = sum(SSP1),
+                   SSP2 = sum(SSP2),
+                   SSP3 = sum(SSP3),
+                   SSP4 = sum(SSP4),
+                   SSP5 = sum(SSP5),
+                   n = length(unique(GEOID)))
+
+
+KTH3 <- dplyr::filter(test2, STATENAM == this.county) 
+
+
+ggplot() +
+  geom_line(data = KTH3, aes(y=SSP1, x = YEAR), color = "green", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP2, x = YEAR), color = "blue", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP3, x = YEAR), color = "brown", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP4, x = YEAR), color = "orange", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP5, x = YEAR), color = "deeppink", lwd=1.5) +
+  theme_bw() +
+  scale_y_continuous(label=comma,
+                     limits = c(0,max(KTH3$SSP5)*1.1),
+                     expand = c(0,0)) +
+  scale_x_continuous(limits = c(2020,max(KTH3$YEAR)+1),
+                     expand = c(0, 0),
+                     breaks = c(2020, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100)) +
+  geom_text(aes(x = 2030, y = KTH3$SSP1[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP1: ", format(round(KTH3$SSP1[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color="green") +
+  geom_text(aes(x = 2030, y = KTH3$SSP2[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP2: ", format(round(KTH3$SSP2[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "blue") +
+  geom_text(aes(x = 2030, y = KTH3$SSP3[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP3: ", format(round(KTH3$SSP3[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "brown") +
+  geom_text(aes(x = 2030, y = KTH3$SSP4[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP4: ", format(round(KTH3$SSP4[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "orange") +
+  geom_text(aes(x = 2030, y = KTH3$SSP5[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP5: ", format(round(KTH3$SSP5[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "deeppink") +
+  theme(plot.caption = element_text(hjust = 0)) +
+  labs(x='Year',
+       y='Population',
+       title = paste0(this.county,': TOTAL POPULATION for the five Shared Socioeconomic Pathways'),
+       caption = paste0("SSP1: Sustainability\n SSP2: Middle of the road\n SSP3: Regional rivalry\n SSP4: Inequality\n SSP5: Fossil-fuel development"))
+```
+
+```{r ssprace, echo=FALSE, results='asis', message=FALSE, warning=FALSE, fig.cap=paste("**Sample projected populations for six random states by race.** Projections are aggregated by race for SSP2.  \\label{SSPrace}")}
+
+
+fipslist <- read_csv(file="https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", col_names = FALSE) %>%
+  mutate(GEOID = paste0(X2, X3)) %>%
+  dplyr::rename(state = X1,
+                STATEID = X2,
+                CNTYID = X3,
+                NAME = X4) %>%
+  filter(!STATEID %in% c("60", "66", "69", "72", "74", "78"))
+
+# Converting the fipslist into a unique list of 2-digit state ID's #
+stateid = unlist(list(unique(fipslist$STATEID)))
+states = unlist(list(unique(fipslist$state)))
+# Converting the fipslist into a unique list of 5-digit county ID's #
+GEOID = unlist(list(unique(fipslist$GEOID)))
+
+statenames <- group_by(fipslist, STATEID, state) %>%
+  dplyr::summarise() %>%
+  dplyr::rename(STATE = STATEID,
+                STATENAM = state)
+
+test2 <- SSPs %>%
+  left_join(., statenames) %>%
+  mutate(RACE = case_when(
+    RACE=="1" ~ "White, NH",
+    RACE=="2" ~ "Black, NH",
+    RACE=="3" ~ "Hispanic",
+    RACE=="4" ~ "Other, NH"
+  )) %>%
+  dplyr::group_by(YEAR, STATENAM, STATE, RACE) %>%
+  dplyr::summarise(SSP1 = sum(SSP1),
+                   SSP2 = sum(SSP2),
+                   SSP3 = sum(SSP3),
+                   SSP4 = sum(SSP4),
+                   SSP5 = sum(SSP5),
+                   n = length(unique(GEOID)))
+
+
+raceplot <- function(this.county, this.ssp){
+  KTH3 <- dplyr::filter(test2, STATENAM == this.county) 
+  tots <- dplyr::summarise(group_by(KTH3,  YEAR), 
+                           SSP1=sum(SSP1),
+                           SSP2 = sum(SSP2),
+                           SSP3 = sum(SSP3),
+                           SSP4 = sum(SSP4),
+                           SSP5 = sum(SSP5))
+  return(ggplot(KTH3 , aes(x = YEAR, y = get(this.ssp), fill=RACE)) +
+           geom_bar(stat = "identity") +
+           theme(plot.caption = element_text(hjust = 0)) +
+           theme_bw() +
+           scale_y_continuous(label=comma,
+                              limits = c(0,max(tots[[this.ssp]])*1.1),
+                              expand = c(0,0)) +
+           scale_x_continuous(limits = c(2017,max(KTH3$YEAR)+3),
+                              expand = c(0, 0),
+                              breaks = c(2020, 2040, 2060, 2080, 2100)) +
+           labs(x='Year',
+                y='Population',
+                title = paste0(this.county,' -- ', this.ssp))
+  )
+}
+ 
+GA1<-raceplot(sample(states,1), "SSP2")
+GA2<-raceplot(sample(states,1), "SSP2")
+GA3<-raceplot(sample(states,1), "SSP2")
+GA4<-raceplot(sample(states,1), "SSP2")
+GA5<-raceplot(sample(states,1), "SSP2")
+GA6<-raceplot(sample(states,1), "SSP2")
+
+prow <- plot_grid(GA1+ theme(legend.position="none"),
+                  GA2+ theme(legend.position="none"),
+                  GA3+ theme(legend.position="none"),
+                  GA4+ theme(legend.position="none"),
+                  GA5+ theme(legend.position="none"), 
+                  GA6+ theme(legend.position="none"), 
+                  ncol = 2)
+
+legend <- get_legend(GA1)
+plot_grid(prow, legend, rel_widths = c(2.5, 0.5))
+
+```
+
+
+```{r counties, echo=FALSE, results='asis', message=FALSE, fig.height=7.5, warning=FALSE, fig.cap=paste("**Sample projected populations for four random counties.** Projections are aggregated to the total population for each SSP.  \\label{SSPage}")}
+ 
+
+fipslist <- read_csv(file="https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", col_names = FALSE) %>%
+  mutate(GEOID = paste0(X2, X3)) %>%
+  dplyr::rename(state = X1,
+                STATEID = X2,
+                CNTYID = X3,
+                NAME = X4) %>%
+  filter(!STATEID %in% c("60", "66", "69", "72", "74", "78"))
+
+# Converting the fipslist into a unique list of 2-digit state ID's #
+stateid = unlist(list(unique(fipslist$STATEID)))
+# Converting the fipslist into a unique list of 5-digit county ID's #
+GEOID = unlist(list(unique(fipslist$GEOID)))
+
+statenames <- group_by(fipslist, STATEID, state) %>%
+  dplyr::summarise() %>%
+  dplyr::rename(STATE = STATEID,
+                STATENAM = state)
+countynames <- group_by(fipslist, GEOID, NAME, state) %>%
+  dplyr::summarise() %>%
+  dplyr::rename(COUNTY = GEOID,
+                COUNTYNAM = NAME,
+                state = state)
+
+test2 <- SSPs %>%
+  left_join(., countynames) %>%
+  dplyr::group_by(YEAR, GEOID, NAME, state) %>%
+  dplyr::summarise(SSP1 = sum(SSP1),
+                   SSP2 = sum(SSP2),
+                   SSP3 = sum(SSP3),
+                   SSP4 = sum(SSP4),
+                   SSP5 = sum(SSP5),
+                   n = length(unique(GEOID)))
+
+
+
+raceplot <- function(this.county){
+  KTH3 <- dplyr::filter(test2, GEOID == this.county)
+
+  return(
+   ggplot() +
+  geom_line(data = KTH3, aes(y=SSP1, x = YEAR), color = "green", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP2, x = YEAR), color = "blue", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP3, x = YEAR), color = "brown", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP4, x = YEAR), color = "orange", lwd=1.5) +
+  geom_line(data = KTH3, aes(y=SSP5, x = YEAR), color = "deeppink", lwd=1.5) +
+  theme_bw() +
+  scale_y_continuous(label=comma,
+                     limits = c(0,max(KTH3$SSP5)*1.1),
+                     expand = c(0,0)) +
+  scale_x_continuous(limits = c(2020,max(KTH3$YEAR)+1),
+                     expand = c(0, 0),
+                     breaks = c(2020, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100)) +
+  geom_text(aes(x = 2030, y = KTH3$SSP1[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP1: ", format(round(KTH3$SSP1[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color="green") +
+  geom_text(aes(x = 2030, y = KTH3$SSP2[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP2: ", format(round(KTH3$SSP2[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "blue") +
+  geom_text(aes(x = 2030, y = KTH3$SSP3[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP3: ", format(round(KTH3$SSP3[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "brown") +
+  geom_text(aes(x = 2030, y = KTH3$SSP4[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP4: ", format(round(KTH3$SSP4[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "orange") +
+  geom_text(aes(x = 2030, y = KTH3$SSP5[which.max(KTH3$YEAR)]*1.02, label = paste0("SSP5: ", format(round(KTH3$SSP5[which.max(KTH3$YEAR)], 0), nsmall=0, big.mark=","))), color = "deeppink") +
+  theme(plot.caption = element_text(hjust = 0)) +
+  labs(x='Year',
+       y='Population',
+       title = paste0(this.county,': ', KTH3$NAME, ', ', KTH3$state))
+  )
+}
+
+GA1<-raceplot(sample(GEOID,1))
+GA2<-raceplot(sample(GEOID,1))
+GA3<-raceplot(sample(GEOID,1))
+GA4<-raceplot(sample(GEOID,1))
+GA5<-raceplot(sample(GEOID,1))
+GA6<-raceplot(sample(GEOID,1))
+
+
+plot_grid(GA1+ theme(legend.position="none"),
+                  GA2+ theme(legend.position="none"),
+                  GA3+ theme(legend.position="none"),
+                  GA4+ theme(legend.position="none"),
+                  # GA5+ theme(legend.position="none"), 
+                  # GA6+ theme(legend.position="none"), 
+                  ncol = 1)
+
+```
