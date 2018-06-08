@@ -200,11 +200,11 @@ test <- left_join(totals2, SSPs2) %>%
          SSP3 = SSP3*percentage*1000000,
          SSP4 = SSP4*percentage*1000000,
          SSP5 = SSP5*percentage*1000000) %>%
-  select(YEAR, SEX, STATE, COUNTY, GEOID, RACE, AGE, NAME, state, SSP1:SSP5)
+  select(YEAR, SEX, STATE, COUNTY, GEOID, RACE, AGE, SSP1:SSP5)
 
 test2 <- test %>%
-  left_join(., statenames) %>%
-  group_by(YEAR, STATENAM) %>%
+  # left_join(., statenames) %>%
+  group_by(YEAR, SEX, STATE, RACE, AGE) %>%
   dplyr::summarise(SSP1 = sum(SSP1),
                    SSP2 = sum(SSP2),
                    SSP3 = sum(SSP3),
@@ -213,7 +213,8 @@ test2 <- test %>%
                    n = length(unique(GEOID)))
 
 
-write_csv(test, "DATA-PROCESSED/SSP_asrc.csv")
+# write_csv(test, "DATA-PROCESSED/SSP_asrc.csv")
+# write_csv(test2, "DATA-PROCESSED/SSP_asrstate.csv")
 
 this.county <- "AK"
 

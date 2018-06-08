@@ -13,14 +13,14 @@ author:
 - name: Mathew E. Hauer ^1^*
   affiliation: Florida State University
 
-abstract: "Small area and subnational population projections are important for understanding long-term demographic changes and typically take the form of a cohort-component model. Cohort-component relies on oftentimes difficult or even impossible to obtain subnational components of change due to data suppression for privacy reasons, small-cell sizes, or are simply unavailable. Cohort-Change Ratios (CCRs) are one approach that overcomes these data limitations but tend to produce unrealistic projected populations due to exponential compounding. I present a simple, parsimonious projection technique based on a variation of CCRs I call cohort-change differences (CCDs). Using ex-post facto analysis for the period 2000-2015 for 3,136 U.S. counties in temporally rectified county boundaries, eighteen five-year age groups (0-85+), two sex groups (Male and Female), and three race-groups (White, Black, Other) using CCDs in a bayesian structural time series for the period 1969-2000, I show that CCDs produce reduced errors compared to CCRs. I then provide county-level population projections by age, sex, and race in five-year intervals for the period 2020-2100, using bayesian structural time series, consistent with the Shared Socioeconomic Pathways. These data and methods have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
+abstract: "Small area and subnational population projections are important for understanding long-term demographic changes and typically take the form of a cohort-component model. Cohort-component relies on oftentimes difficult or even impossible to obtain subnational components of change due to data suppression for privacy reasons, small-cell sizes, or are simply unavailable. Cohort-Change Ratios (CCRs) are one approach that overcomes these data limitations but tend to produce unrealistic projected populations due to exponential compounding. I present a simple, parsimonious projection technique based on a variation of CCRs I call cohort-change differences (CCDs). Using ex-post facto analysis for the period 2000-2015 for 3,136 U.S. counties in temporally rectified county boundaries, eighteen five-year age groups (0-85+), two sex groups (Male and Female), and three race-groups (White, Black, Other) using CCDs in a Bayesian structural time series for the period 1969-2000, I show that CCDs produce reduced errors compared to CCRs. I then provide county-level population projections by age, sex, and race in five-year intervals for the period 2020-2100, using Bayesian structural time series, consistent with the Shared Socioeconomic Pathways. These data and methods have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
 
 # I provide county-level population projections by age, sex, and race in five-year intervals for the period 2015-2065 for 3,136 counties. Using historic U.S. census data in temporally rectified county boundaries and race groups for the period 1990-2015, I calculate cohort-change ratios (CCRs) and cohort-change differences (CCDs) for eighteen five-year age groups (0-85+), two sex groups (Male and Female), and four race groups (White NH, Black NH, Other NH, Hispanic) in over 3,000 U.S counties. I then project these CCRs/CCDs using Unobserved Components Models as inputs into leslie matrix population projection models for a blended CCD/CCR population projection. My ex-post facto evaluations using three race groups (White, Black, Other) on the 1969-2000 base period evaluated at 2005, 2010, and 2015 demonstrate confidence in the accuracy of the projections. These data have numerous potential uses and can serve as inputs for addressing questions involving sub-national demographic change in the United States."
 keywords: "Population projections; subnational; demographic change; cohort-change ratios"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 geometry: margin=1in
 #fontfamily: mathpazo
-fontsize: 12pt
+fontsize: 11pt
 spacing: double
 bibliography: LATEX/mybibfile.bib
 biblio-style: apsr
@@ -181,7 +181,7 @@ These equations specify a trend where the level $\mu_t$ vary over time, governed
 
 The projected CCRs and CCDs are then input into Leslie matrices to create projected populations [@caswell2001matrix].
 
-Equation \ref{eq:ccrleslie} describes the Leslie matrices for CCRs and equation \ref{eq:ccdleslie} describes the Leslie matrices for CCDs.
+\autoref{eq:ccrleslie} describes the Leslie matrices for CCRs and \autoref{eq:ccdleslie} describes the Leslie matrices for CCDs.
 
 \begin{equation}\label{eq:ccrleslie}
 \begin{bmatrix}
@@ -232,7 +232,12 @@ n_{0} & 0       	& 0       	& \dots 		& 0 & 0 \\
 \end{equation}
 
 \begin{equation}
-P_{t+1}
+\begin{bmatrix}
+n_0 \\
+n_1 \\
+\vdots \\
+n_{18}
+\end{bmatrix}_{t+1}
 =
 \begin{bmatrix}
 \sum \mathbf{T_{1j}} \\
@@ -281,7 +286,7 @@ There are two primary bridged-race data sets. The first covers the time period 1
 In the event a UCM contained NA or infinite values or produced covariance matrices with values larger than 10,000,000, the projections were set to 0. Upper and Lower bounds of failed UCMs were set to 0. Any infinite, NA, or NAN CCR, CCD, or CWR was set to 0. Any projected negative populations are also set to 0.
 
 ## Projection Controls
-As shown below, any set of population projections are likely to produce higher than expected projections (see \autoref{tab:TOTALeval}). To prevent runaway population growth, I control the projected output to the Shared Socioeconomic Pathways (SSPs) [@o2014new]. The SSPs are socio-economic scenarios that derive emissions scenarios coupled with climate policies. They are designed to evaluate both climate change impacts and adaptation measures in harmony with the Representative Concentration Pathways (RCPs) for emission scenarios.
+As shown below, any set of population projections are likely to produce higher than expected projections (see \autoref{tab:TOTALeval}). To prevent runaway population growth, I control the projected output to the Shared Socioeconomic Pathways (SSPs) [@o2014new]. The SSPs are socio-economic scenarios that derive emissions scenarios coupled with climate policies. They are designed to evaluate both climate change impacts and adaptation measures in harmony with the Representative Concentration Pathways (RCPs) for emission scenarios. Scholars have downscaled the SSPs to gridded population projections [@jones2016spatially], while these projections are incredibly useful, they lack detailed demographic characteristics.
 
 The five SSPs are colloquially named SSP1 (Sustainability), SSP2 (Middle of the Road), SSP3 (Regional Rivalry), SSP4 (Inequality), and SSP5 (Fossil-fueled Development) [@o2017roads]. These five SSPs cover potential futures involving various growth policies, fossil-fuel usage, mitigation policies, adaptation policies, and population change [@samir2017human].
 
