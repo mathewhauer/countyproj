@@ -448,9 +448,9 @@ m_cont
 
 ## Age Structure Error
 
-\autoref{ages total} reports the overall errors for age groups at the county level. All three models produce similar Apes. For any given county, the average error is approximately 11%. Similar to the overall errors, the bias tends to be for over-projection of age groups as all of the ALPEs are positive.
+\autoref{agestotal} reports the overall errors for age groups at the county level. All three models produce similar Apes. For any given county, the average error is approximately 11%. Similar to the overall errors, the bias tends to be for over-projection of age groups as all of the ALPEs are positive.
 
-```{r agestotal, echo=FALSE, results='asis', message=FALSE, warning=FALSE, cache=TRUE, fig.cap=paste("**Evaluation of Age Group Errors.**\\label{agestotal}")}
+```{r, echo=FALSE, results='asis', message=FALSE, warning=FALSE, cache=TRUE, fig.cap=paste("**Evaluation of Age Group Errors.**\\label{agestotal}")}
 
 eval_ucm_agetotal <- base_projunfitted %>%
   filter(!TYPE == "BASE") %>%
