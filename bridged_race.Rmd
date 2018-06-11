@@ -726,7 +726,8 @@ eval_ucm_cntytotal <- base_projunfitted %>%
   mutate(A= round(A, 6),
          #FLAG1 = abs(A-POPULATION)/abs(A+POPULATION),
     FLAG1 = if_else(is.na(abs((A-POPULATION))/(A+POPULATION)), 0,abs((A-POPULATION))/(A+POPULATION)),
-         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0)) %>%
+         FLAG2 = if_else(POPULATION>=B & POPULATION<=C,1,0),
+    ascry = paste0(AGE,SEX,COUNTYRACE,YEAR)) %>%
   #ungroup() %>%
   #na.omit %>%
   group_by(YEAR, TYPE) %>%

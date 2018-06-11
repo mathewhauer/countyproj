@@ -39,6 +39,8 @@ addmult <- left_join(addsum, basesum) %>%
   mutate(COMBINED = if_else(A>= POPULATION, "ADD" ,"Mult")) %>%
   dplyr::select(STATE, COUNTY, RACE, GEOID, COMBINED)
 
+addmult[is.na(addmult)] <- "ADD"
+
 
 
 combined<- left_join(z, addmult) %>%
